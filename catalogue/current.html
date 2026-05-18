@@ -1,0 +1,2423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Catalogue Creation Workflow — Commerce Vision → Pronto Xi</title>
+<style>
+  /* ---------- Global ---------- */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; font-family: 'Segoe UI', Tahoma, sans-serif; background: #1a1d24; color: #e8e8e8; overflow: hidden; }
+  body { display: flex; flex-direction: column; }
+
+  /* ---------- Top bar (controls) ---------- */
+  .controls {
+    background: #0e1015; padding: 10px 20px; display: flex; align-items: center; gap: 14px;
+    border-bottom: 1px solid #2a2e36; flex-shrink: 0; z-index: 10;
+  }
+  .controls h1 { font-size: 14px; font-weight: 500; color: #e8e8e8; flex: 1; letter-spacing: 0.3px; }
+  .controls h1 span { color: #7a8290; font-weight: 400; }
+  .btn {
+    background: #2a2e36; border: 1px solid #3a3f4a; color: #d8d8d8; padding: 6px 14px;
+    border-radius: 4px; cursor: pointer; font-size: 12px; font-family: inherit; transition: all 0.15s;
+  }
+  .btn:hover { background: #353a45; border-color: #4a505c; }
+  .btn.primary { background: #d97706; border-color: #d97706; color: white; }
+  .btn.primary:hover { background: #ea8915; }
+  .scene-indicator { display: flex; gap: 6px; align-items: center; }
+  .scene-dot {
+    width: 10px; height: 10px; border-radius: 50%; background: #3a3f4a; cursor: pointer; transition: all 0.2s;
+  }
+  .scene-dot.active { background: #d97706; transform: scale(1.3); }
+  .scene-dot.complete { background: #5a7a4a; }
+  .scene-label { font-size: 11px; color: #7a8290; margin-left: 8px; min-width: 220px; }
+
+  /* ---------- Stage ---------- */
+  .stage {
+    flex: 1; position: relative; background: #14171d; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .scene {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.5s ease;
+  }
+  .scene.active { opacity: 1; pointer-events: all; }
+
+  /* ---------- Browser chrome ---------- */
+  .browser {
+    width: 95%; max-width: 1280px; height: 88%; background: white; border-radius: 8px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5); overflow: hidden; display: flex; flex-direction: column;
+    color: #333;
+  }
+  .browser-bar {
+    background: #f0f0f0; padding: 8px 14px; display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid #d4d4d4; flex-shrink: 0;
+  }
+  .browser-dots { display: flex; gap: 6px; }
+  .browser-dots span { width: 11px; height: 11px; border-radius: 50%; }
+  .browser-dots span:nth-child(1) { background: #ff5f57; }
+  .browser-dots span:nth-child(2) { background: #ffbd2e; }
+  .browser-dots span:nth-child(3) { background: #28c940; }
+  .browser-url {
+    flex: 1; background: white; border-radius: 4px; padding: 4px 10px;
+    font-size: 11px; color: #666; border: 1px solid #d4d4d4; margin-left: 8px;
+  }
+  .browser-url .lock { color: #4a8a4a; margin-right: 6px; }
+
+  .browser-body { flex: 1; display: flex; overflow: hidden; }
+
+  /* ---------- Commerce Vision UI: Sidebar ---------- */
+  .cv-sidebar {
+    width: 220px; background: linear-gradient(180deg, #1f3a2e 0%, #1a3127 100%); color: #e8e8e8;
+    padding: 0; flex-shrink: 0; font-size: 13px; overflow-y: auto;
+  }
+  .cv-logo {
+    padding: 16px 18px; font-weight: 700; font-size: 18px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .cv-logo .cv-mark { color: #f97316; }
+  .cv-logo .cv-sub { display: block; font-size: 9px; letter-spacing: 2px; color: #8a9388; font-weight: 400; margin-top: 2px; }
+  .cv-section-label { padding: 14px 18px 6px; font-size: 10px; letter-spacing: 1.5px; color: #6a7568; }
+  .cv-nav-item {
+    padding: 9px 18px; display: flex; align-items: center; gap: 10px; cursor: pointer;
+    transition: background 0.15s; font-size: 13px;
+  }
+  .cv-nav-item:hover { background: rgba(255,255,255,0.04); }
+  .cv-nav-item.highlight {
+    background: rgba(249, 115, 22, 0.18); border-left: 3px solid #f97316; padding-left: 15px;
+  }
+  .cv-nav-icon { width: 16px; height: 16px; opacity: 0.7; display: inline-block; }
+
+  /* Submenu */
+  .cv-submenu {
+    position: absolute; left: 220px; top: 0; width: 260px; background: #1f3a2e;
+    border-left: 1px solid rgba(255,255,255,0.08); padding: 10px 0; z-index: 5;
+    opacity: 0; transform: translateX(-10px); pointer-events: none;
+    transition: opacity 0.3s, transform 0.3s;
+  }
+  .cv-submenu.show { opacity: 1; transform: translateX(0); pointer-events: all; }
+  .cv-submenu-item { padding: 8px 16px; cursor: pointer; font-size: 13px; color: #e8e8e8; }
+  .cv-submenu-item:hover { background: rgba(255,255,255,0.05); }
+  .cv-submenu-item.highlight { background: rgba(249, 115, 22, 0.2); color: white; }
+  .cv-submenu-item .arrow { color: #f97316; margin-right: 6px; }
+
+  /* ---------- Commerce Vision top orange bar ---------- */
+  .cv-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #f5f5f5; }
+  .cv-topbar {
+    background: linear-gradient(180deg, #d97706 0%, #c4660e 100%); color: white;
+    padding: 8px 16px; display: flex; align-items: center; gap: 12px; font-size: 13px; flex-shrink: 0;
+  }
+  .cv-topbar .cms-label { font-weight: 700; letter-spacing: 1px; }
+  .cv-topbar .env-pill {
+    background: rgba(255,255,255,0.12); padding: 4px 12px; border-radius: 3px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .cv-topbar .stage-pill {
+    background: white; color: #d97706; padding: 4px 10px; border-radius: 3px; font-weight: 700;
+    font-size: 11px; letter-spacing: 1px;
+  }
+  .cv-topbar .url-text { color: rgba(255,255,255,0.9); font-size: 11px; }
+  .cv-topbar .version { margin-left: 6px; color: rgba(255,255,255,0.6); font-size: 11px; font-style: italic; }
+  .cv-topbar .user { margin-left: auto; font-size: 12px; }
+
+  /* ---------- Content area ---------- */
+  .cv-content {
+    flex: 1; padding: 18px 24px; overflow: auto; position: relative;
+  }
+  .cv-page-bar {
+    background: linear-gradient(180deg, #3a5f7e 0%, #2f4f6a 100%); color: white; padding: 8px 14px;
+    display: flex; align-items: center; gap: 14px; font-size: 13px;
+    border-top: 3px solid #f7c948; border-radius: 4px 4px 0 0;
+  }
+  .cv-page-bar a { color: white; cursor: pointer; }
+  .cv-page-bar a:hover { text-decoration: underline; }
+  .cv-page-bar .btn-bar {
+    background: white; color: #333; padding: 4px 10px; border-radius: 3px; font-size: 12px;
+    border: 1px solid #d4d4d4;
+  }
+  .cv-page-bar .catalogue-label {
+    margin-left: auto; font-weight: 600; color: #f7c948;
+  }
+
+  /* Two-pane (tree + tabs) */
+  .cv-pane {
+    background: white; min-height: 400px; padding: 16px; display: flex; gap: 24px;
+    border: 1px solid #d4d4d4; border-top: none;
+  }
+  .cv-tree {
+    width: 320px; padding: 8px; font-size: 13px; color: #333;
+  }
+  .tree-node {
+    padding: 4px 0 4px 18px; position: relative; cursor: pointer;
+    opacity: 0; transform: translateY(-4px); transition: opacity 0.35s, transform 0.35s;
+  }
+  .tree-node.show { opacity: 1; transform: translateY(0); }
+  .tree-node::before {
+    content: '▸'; position: absolute; left: 0; color: #d97706; font-size: 10px; top: 6px;
+    transition: transform 0.2s;
+  }
+  .tree-node.expanded::before { transform: rotate(90deg); }
+  .tree-node.leaf::before { content: ''; }
+  .tree-node.selected > .tree-label {
+    border: 1px solid #d97706; padding: 1px 8px; border-radius: 2px;
+    background: rgba(249, 115, 22, 0.08);
+  }
+  .tree-children { padding-left: 18px; }
+  .tree-label { display: inline-block; padding: 1px 2px; }
+
+  /* Tabs panel */
+  .cv-tabs-wrap { flex: 1; }
+  .cv-tabs {
+    display: flex; border-bottom: 1px solid #d4d4d4; gap: 0;
+  }
+  .cv-tab {
+    padding: 10px 22px; cursor: pointer; font-size: 13px; color: #555;
+    border: 1px solid transparent; border-bottom: none; margin-bottom: -1px;
+    background: #fafafa;
+  }
+  .cv-tab.active {
+    background: white; color: #333; border-color: #d4d4d4;
+    border-top: 2px solid #d97706;
+  }
+  .cv-tab-content { padding: 18px; font-size: 13px; color: #333; }
+  .field-row { display: flex; gap: 12px; margin-bottom: 10px; align-items: center; }
+  .field-label { width: 110px; text-align: right; color: #555; font-size: 13px; }
+  .field-value {
+    background: #fffbeb; padding: 2px 8px; border-radius: 2px; font-family: 'Consolas', monospace;
+    font-size: 12px; color: #92400e;
+  }
+  .field-static { color: #333; font-size: 13px; }
+  .field-select {
+    border: 1px solid #c4c4c4; padding: 3px 8px; background: white; border-radius: 2px;
+    font-size: 12px; min-width: 140px;
+  }
+
+  /* Products tab inputs */
+  .search-row { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+  .search-input {
+    border: 1px solid #c4c4c4; padding: 5px 10px; font-size: 13px; min-width: 260px; border-radius: 2px;
+    font-family: 'Consolas', monospace;
+  }
+  .search-input.typing { border-color: #d97706; }
+  .btn-cv {
+    background: linear-gradient(180deg, #fafafa 0%, #e8e8e8 100%); border: 1px solid #c4c4c4;
+    padding: 5px 14px; font-size: 12px; cursor: pointer; border-radius: 2px;
+  }
+  .btn-cv.highlight {
+    border-color: #d97706; box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
+  }
+  .product-results {
+    background: white; border: 1px solid #e4e4e4; padding: 8px; margin-top: 8px;
+    max-height: 220px; overflow-y: auto; font-size: 12px;
+  }
+  .product-results .group-header {
+    padding: 4px 6px; background: #fffbeb; border: 1px solid #fbd38d; border-radius: 2px;
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;
+    font-weight: 500;
+  }
+  .product-results .product-row {
+    display: flex; justify-content: space-between; padding: 3px 6px; color: #555;
+    border-bottom: 1px dotted #eee;
+  }
+  .selected-products {
+    background: #f5f8fb; border: 1px solid #cdd9e4; padding: 8px; margin-bottom: 10px; font-size: 12px;
+  }
+  .selected-products .label { color: #2f5b8a; font-weight: 600; margin-bottom: 6px; }
+  .selected-row {
+    display: flex; justify-content: space-between; padding: 3px 0;
+    opacity: 0; transform: translateX(-8px); transition: all 0.35s;
+  }
+  .selected-row.show { opacity: 1; transform: translateX(0); }
+
+  /* ---------- Cursor ---------- */
+  .cursor {
+    position: absolute; width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(249, 115, 22, 0.35); border: 2px solid #d97706;
+    pointer-events: none; z-index: 100;
+    transform: translate(-50%, -50%);
+    transition: top 0.7s cubic-bezier(0.4, 0, 0.2, 1), left 0.7s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
+    opacity: 0;
+  }
+  .cursor.visible { opacity: 1; }
+  .cursor.click { animation: clickPulse 0.35s ease; }
+  @keyframes clickPulse {
+    0% { transform: translate(-50%, -50%) scale(1); }
+    50% { transform: translate(-50%, -50%) scale(0.7); background: rgba(249, 115, 22, 0.6); }
+    100% { transform: translate(-50%, -50%) scale(1); }
+  }
+
+  /* ---------- Modal (New Catalogue) ---------- */
+  .modal-backdrop {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.4); display: flex;
+    align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s;
+    pointer-events: none; z-index: 50;
+  }
+  .modal-backdrop.show { opacity: 1; pointer-events: all; }
+  .modal {
+    background: white; border-radius: 6px; padding: 0; min-width: 420px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3); transform: scale(0.95); transition: transform 0.3s;
+  }
+  .modal-backdrop.show .modal { transform: scale(1); }
+  .modal-header {
+    background: #3a5f7e; color: white; padding: 10px 16px; border-radius: 6px 6px 0 0;
+    font-size: 14px; font-weight: 500;
+  }
+  .modal-body { padding: 20px; }
+  .modal-body .field-row { margin-bottom: 14px; }
+  .modal-body input {
+    border: 1px solid #c4c4c4; padding: 5px 10px; font-size: 13px; flex: 1;
+    border-radius: 2px;
+  }
+  .modal-body input.typing { border-color: #d97706; box-shadow: 0 0 0 2px rgba(249,115,22,0.15); }
+  .modal-footer {
+    padding: 12px 16px; background: #f7f7f7; border-top: 1px solid #e4e4e4;
+    display: flex; justify-content: flex-end; gap: 8px; border-radius: 0 0 6px 6px;
+  }
+
+  /* ---------- Scene-specific overlays ---------- */
+  .scene-title {
+    position: absolute; top: 28px; left: 50%; transform: translateX(-50%);
+    color: white; font-size: 13px; letter-spacing: 3px; opacity: 0.5;
+    text-transform: uppercase; z-index: 5;
+  }
+  .scene-title strong { color: #f97316; font-weight: 600; }
+
+  /* ---------- Flow / transition scene ---------- */
+  .flow-stage {
+    width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 40px;
+  }
+  .flow-pipeline {
+    display: flex; align-items: center; gap: 30px; position: relative;
+  }
+  .flow-node {
+    width: 200px; height: 240px; background: white; border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 12px; color: #333; padding: 20px;
+    position: relative;
+  }
+  .flow-node .node-header {
+    width: 100%; padding: 8px 12px; border-radius: 4px; font-size: 11px; letter-spacing: 1px;
+    color: white; text-align: center; font-weight: 600; text-transform: uppercase;
+  }
+  .flow-node.cv .node-header { background: #d97706; }
+  .flow-node.pronto .node-header { background: #003f7f; }
+  .flow-node.sync .node-header { background: #5a7a4a; }
+  .flow-node .node-icon { font-size: 56px; }
+  .flow-node .node-label { font-size: 14px; font-weight: 600; text-align: center; }
+  .flow-node .node-sub { font-size: 11px; color: #888; text-align: center; }
+
+  .flow-arrow {
+    width: 80px; height: 4px; background: linear-gradient(90deg, #d97706 0%, #003f7f 100%);
+    position: relative; border-radius: 2px;
+  }
+  .flow-arrow::after {
+    content: ''; position: absolute; right: -10px; top: -8px;
+    border-left: 14px solid #003f7f; border-top: 10px solid transparent; border-bottom: 10px solid transparent;
+  }
+  .flow-arrow.sync::after { border-left-color: #5a7a4a; }
+  .flow-arrow.sync { background: linear-gradient(90deg, #003f7f 0%, #5a7a4a 100%); }
+
+  .flow-arrow .particle {
+    position: absolute; width: 10px; height: 10px; border-radius: 50%;
+    background: white; box-shadow: 0 0 12px rgba(255,255,255,0.8); top: -3px;
+    animation: particleFlow 1.6s linear infinite;
+  }
+  @keyframes particleFlow {
+    0% { left: 0; opacity: 0; }
+    20% { opacity: 1; }
+    80% { opacity: 1; }
+    100% { left: 100%; opacity: 0; }
+  }
+
+  .flow-caption {
+    color: #b8c0cc; font-size: 14px; line-height: 1.6; max-width: 700px; text-align: center;
+    padding: 20px 30px; background: rgba(255,255,255,0.04); border-radius: 8px;
+    border-left: 3px solid #f7c948;
+  }
+  .flow-caption strong { color: #f7c948; }
+
+  /* ---------- Pronto Xi: Office-style ribbon UI ---------- */
+  .pronto-window {
+    width: 95%; max-width: 1280px; height: 88%; background: #d4dff0;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5); display: flex; flex-direction: column;
+    overflow: hidden; color: #222; font-family: 'Segoe UI', Tahoma, sans-serif;
+    border: 1px solid #6a82a3; border-radius: 4px;
+  }
+  .pronto-titlebar-bar {
+    background: linear-gradient(180deg, #e8eef7 0%, #b8c8df 100%);
+    padding: 4px 8px; display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid #8a9ab3; font-size: 12px; color: #1a3a6a;
+    height: 28px;
+  }
+  .pronto-titlebar-bar .p-logo {
+    background: #c4341c; color: white; font-weight: 700; font-style: italic;
+    padding: 2px 8px; border-radius: 2px; font-size: 13px;
+  }
+  .pronto-titlebar-bar .title { flex: 1; font-weight: 600; }
+  .pronto-titlebar-bar .win-controls { display: flex; gap: 2px; }
+  .pronto-titlebar-bar .win-btn {
+    width: 28px; height: 18px; background: #d4dff0; border: 1px solid #8a9ab3;
+    font-size: 9px; color: #333; display: flex; align-items: center; justify-content: center;
+  }
+  /* Ribbon tabs */
+  .pronto-tabs {
+    background: linear-gradient(180deg, #c8d6ea 0%, #aabcd6 100%);
+    padding: 0 8px; display: flex; gap: 2px; border-bottom: 1px solid #8a9ab3;
+    font-size: 12px;
+  }
+  .pronto-tabs .ptab {
+    padding: 4px 14px; cursor: pointer; color: #1a3a6a;
+    border-radius: 3px 3px 0 0;
+  }
+  .pronto-tabs .ptab.active {
+    background: linear-gradient(180deg, #f0f4fa 0%, #e0e8f4 100%);
+    color: #1a3a6a; border: 1px solid #8a9ab3; border-bottom: none;
+    padding: 4px 14px 5px;
+  }
+  /* Ribbon body */
+  .pronto-ribbon {
+    background: linear-gradient(180deg, #e8edf6 0%, #d4dff0 100%);
+    padding: 4px 6px; display: flex; gap: 0; border-bottom: 1px solid #8a9ab3;
+    align-items: stretch;
+  }
+  .ribbon-group {
+    display: flex; flex-direction: column; padding: 0 8px;
+    border-right: 1px solid #b8c5db; align-items: center; min-width: 60px;
+  }
+  .ribbon-group:last-child { border-right: none; }
+  .ribbon-group-content { display: flex; gap: 4px; flex: 1; align-items: flex-start; padding: 2px 0; }
+  .ribbon-group-label {
+    font-size: 10px; color: #555; padding: 2px 0; text-align: center; width: 100%;
+    border-top: 1px solid #c8d0e0; margin-top: 4px;
+  }
+  .ribbon-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 1px;
+    padding: 2px 6px; cursor: pointer; border-radius: 2px; min-width: 40px;
+    font-size: 10px; color: #222;
+  }
+  .ribbon-btn:hover { background: rgba(255,255,255,0.5); border: 1px solid #aabcd6; padding: 1px 5px; }
+  .ribbon-btn.large .icon { font-size: 22px; line-height: 1; margin-bottom: 2px; }
+  .ribbon-btn.small { flex-direction: row; min-width: 0; gap: 4px; padding: 1px 4px; font-size: 11px; }
+  .ribbon-btn.small .icon { font-size: 12px; }
+  .ribbon-btns-stack { display: flex; flex-direction: column; gap: 1px; }
+  .ribbon-btn .icon { font-size: 14px; }
+  /* Pronto body split: left tree + right pane */
+  .pronto-body-split {
+    flex: 1; display: flex; overflow: hidden; background: #f0f3f8;
+  }
+  .pronto-tree {
+    width: 280px; background: white; border-right: 1px solid #b8c5db;
+    overflow-y: auto; padding: 4px 0; font-size: 12px;
+  }
+  .pronto-tree-header {
+    background: linear-gradient(180deg, #e8edf6 0%, #d4dff0 100%);
+    padding: 4px 8px; font-size: 11px; color: #1a3a6a;
+    border-bottom: 1px solid #b8c5db; display: flex; gap: 6px;
+  }
+  .pronto-tree-header .pin { margin-left: auto; cursor: pointer; }
+  .p-tree-node {
+    padding: 2px 4px 2px 18px; cursor: pointer; position: relative;
+    color: #111; user-select: none;
+  }
+  .p-tree-node::before {
+    content: '▸'; position: absolute; left: 4px; top: 3px;
+    color: #555; font-size: 9px; transition: transform 0.2s;
+  }
+  .p-tree-node.expanded::before { transform: rotate(90deg); }
+  .p-tree-node.leaf::before { content: ''; }
+  .p-tree-children { display: none; padding-left: 14px; }
+  .p-tree-node.expanded > .p-tree-children { display: block; }
+  .p-tree-node .p-label {
+    padding: 1px 4px; display: inline-flex; align-items: center; gap: 4px;
+  }
+  .p-tree-node .p-icon {
+    width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11px;
+  }
+  .p-tree-node.highlight > .p-label {
+    background: #ffe0a0; outline: 2px solid #d97706; border-radius: 1px;
+  }
+  .p-tree-node.bold > .p-label { font-weight: 700; }
+
+  .pronto-main {
+    flex: 1; padding: 8px; overflow: auto; background: #d8d8e8; position: relative;
+  }
+  /* RSEA notice board */
+  .rsea-notice {
+    background: #e8e0f8; border: 1px solid #aaa; padding: 0;
+    height: 100%; display: flex; flex-direction: column;
+  }
+  .rsea-notice-title {
+    text-align: center; padding: 8px; color: #1a3a6a; font-weight: 700; font-size: 14px;
+  }
+  .rsea-notice-body {
+    flex: 1; background: #fffbdd; border: 1px solid #d4cc88; margin: 0 8px 8px;
+    display: flex; flex-direction: column; align-items: center; padding: 14px;
+  }
+  .rsea-banner {
+    background: #000; padding: 16px; width: 100%; max-width: 600px; text-align: center;
+    margin-bottom: 14px;
+  }
+  .rsea-banner .rsea-logo-yellow {
+    color: #f7e500; font-weight: 900; font-style: italic; font-size: 34px;
+    letter-spacing: -1px; display: inline-block; transform: skewX(-8deg);
+  }
+  .rsea-banner .rsea-safety {
+    color: #f7e500; font-size: 11px; letter-spacing: 4px; display: block;
+    margin-top: 2px;
+  }
+  .rsea-info-block {
+    background: #76c5c5; width: 100%; max-width: 600px; padding: 16px;
+    text-align: center; color: #111; font-size: 13px; line-height: 1.8;
+  }
+  .rsea-info-block .live-copy { color: #c01515; font-weight: 700; text-decoration: underline; }
+  .rsea-info-block .home-link { color: #1a3a8a; text-decoration: underline; font-weight: 700; }
+
+  /* Item Security dialog */
+  .item-sec-dialog {
+    position: absolute; top: 40px; left: 80px; right: 40px; bottom: 40px;
+    background: white; border: 1px solid #6a82a3; box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    display: flex; flex-direction: column;
+  }
+  .item-sec-titlebar {
+    background: linear-gradient(180deg, #4a6fa5 0%, #335588 100%); color: white;
+    padding: 4px 10px; font-size: 12px; display: flex; align-items: center; gap: 8px;
+  }
+  .item-sec-titlebar .ttl { flex: 1; font-weight: 600; }
+  .item-sec-titlebar .win-btn-sm {
+    width: 22px; height: 18px; background: #d4dff0; border: 1px solid #aaa;
+    color: #333; font-size: 10px; display: flex; align-items: center; justify-content: center;
+  }
+  .item-sec-tabs {
+    background: #e8edf6; padding: 4px 4px 0; display: flex; gap: 2px;
+    border-bottom: 1px solid #b8c5db;
+  }
+  .item-sec-tabs .tab {
+    background: white; padding: 4px 16px; border: 1px solid #b8c5db; border-bottom: none;
+    font-size: 12px; cursor: pointer;
+  }
+  .item-sec-grid {
+    flex: 1; background: white; overflow: auto; font-size: 12px;
+  }
+  .item-sec-grid table { width: 100%; border-collapse: collapse; }
+  .item-sec-grid th {
+    background: linear-gradient(180deg, #e8edf6 0%, #d4dff0 100%);
+    padding: 6px 10px; text-align: left; font-weight: 600; font-size: 12px;
+    border-right: 1px solid #b8c5db; border-bottom: 1px solid #8a9ab3; color: #1a3a6a;
+    position: relative;
+  }
+  .item-sec-grid th::after {
+    content: ' ▾'; color: #888; font-size: 9px;
+  }
+  .item-sec-grid td {
+    padding: 4px 10px; border-right: 1px solid #e0e0e8; border-bottom: 1px solid #eee;
+    font-family: 'Consolas', monospace; font-size: 12px;
+  }
+  .item-sec-grid tr:nth-child(even) td { background: #eef3fa; }
+  .item-sec-grid tr.highlight td { background: #ffe9b8 !important; color: #5a3500; }
+  .item-sec-grid tr.new-row td {
+    background: #d4f0d4 !important; animation: rowFlash 1.4s ease-out forwards;
+  }
+  @keyframes rowFlash {
+    0% { background: #b0e0b0 !important; }
+    100% { background: #eef3fa !important; }
+  }
+  .item-sec-grid tr.new-row:nth-child(odd) td { background: #d4f0d4 !important; }
+  .item-sec-status {
+    background: linear-gradient(180deg, #c8d6ea 0%, #aabcd6 100%);
+    height: 80px; border-top: 1px solid #8a9ab3;
+    background-image: linear-gradient(180deg, #c8d6ea, #aabcd6);
+    background-image: linear-gradient(180deg, #c8d6ea 0%, #aabcd6 50%, #5470a0 100%);
+  }
+  .item-sec-actions {
+    background: #e8edf6; padding: 8px 14px; border-top: 1px solid #b8c5db;
+    display: flex; gap: 20px; font-size: 13px;
+  }
+  .item-sec-actions a { color: #1a3a6a; cursor: pointer; }
+  .item-sec-actions a.primary {
+    color: #1a3a6a; text-decoration: underline; font-weight: 600;
+  }
+  .item-sec-actions a:hover { text-decoration: underline; }
+
+  /* Entry dialog (popup over grid) */
+  .entry-dialog {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.95);
+    background: white; border: 1px solid #6a82a3; box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+    min-width: 460px; z-index: 100; opacity: 0; pointer-events: none;
+    transition: opacity 0.3s, transform 0.3s;
+  }
+  .entry-dialog.show { opacity: 1; transform: translate(-50%, -50%) scale(1); pointer-events: all; }
+  .entry-dialog .ed-title {
+    background: linear-gradient(180deg, #4a6fa5 0%, #335588 100%); color: white;
+    padding: 6px 12px; font-size: 13px; font-weight: 600;
+  }
+  .entry-dialog .ed-body {
+    padding: 20px; display: flex; flex-direction: column; gap: 12px;
+  }
+  .entry-dialog .ed-row { display: flex; gap: 10px; align-items: center; }
+  .entry-dialog .ed-label { width: 140px; text-align: right; font-size: 12px; color: #333; }
+  .entry-dialog .ed-input {
+    flex: 1; padding: 4px 8px; border: 1px solid #8a9ab3;
+    font-family: 'Consolas', monospace; font-size: 12px;
+  }
+  .entry-dialog .ed-input.typing { border-color: #d97706; box-shadow: 0 0 0 2px rgba(249,115,22,0.15); }
+  .entry-dialog .ed-footer {
+    padding: 10px; background: #f0f3f8; border-top: 1px solid #b8c5db;
+    display: flex; justify-content: flex-end; gap: 8px;
+  }
+  .entry-dialog .ed-btn {
+    padding: 4px 16px; background: linear-gradient(180deg, #fafafa 0%, #d4dff0 100%);
+    border: 1px solid #8a9ab3; border-radius: 2px; cursor: pointer; font-size: 12px;
+  }
+
+  /* ---------- Transition / sync scenes ---------- */
+  .transition-stage {
+    width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 30px; position: relative;
+  }
+  .trans-panel {
+    width: 240px; height: 280px; background: white; border-radius: 8px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.4); padding: 16px;
+    display: flex; flex-direction: column; align-items: center; gap: 10px; color: #333;
+    position: relative;
+  }
+  .trans-panel.cv { border-top: 4px solid #d97706; }
+  .trans-panel.pronto { border-top: 4px solid #c4341c; }
+  .trans-panel.sync { border-top: 4px solid #5a7a4a; }
+  .trans-panel.store { border-top: 4px solid #f7e500; background: #1a1a1a; color: #f7e500; }
+  .trans-panel .tp-header {
+    width: 100%; text-align: center; font-size: 11px; letter-spacing: 2px;
+    text-transform: uppercase; color: #888; font-weight: 600;
+  }
+  .trans-panel.store .tp-header { color: #888; }
+  .trans-panel .tp-icon { font-size: 56px; }
+  .trans-panel .tp-title { font-weight: 700; font-size: 15px; text-align: center; }
+  .trans-panel .tp-sub { font-size: 11px; color: #888; text-align: center; line-height: 1.5; }
+  .trans-panel.store .tp-sub { color: #aaa; }
+  .csv-packet {
+    position: absolute; background: #f5f8fb; border: 1px solid #cdd9e4;
+    border-radius: 4px; padding: 6px 12px; font-family: 'Consolas', monospace;
+    font-size: 11px; color: #2f5b8a; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 20; white-space: nowrap;
+  }
+  .csv-packet::before { content: '📄 '; }
+  .moon-icon {
+    position: absolute; font-size: 70px; opacity: 0;
+    transition: opacity 1s, transform 2s;
+  }
+  .moon-icon.show { opacity: 1; }
+  .trans-flow-arrow {
+    flex: 1; height: 3px; background: linear-gradient(90deg, transparent, #888, transparent);
+    margin: 0 -20px; max-width: 200px; min-width: 100px; align-self: center;
+  }
+  .trans-row { display: flex; align-items: center; gap: 0; }
+
+  /* ---------- RSEA storefront ---------- */
+  .store-window {
+    width: 95%; max-width: 1280px; height: 88%; background: white;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5); display: flex; flex-direction: column;
+    overflow: hidden; color: #111; font-family: 'Helvetica Neue', Arial, sans-serif;
+  }
+  .store-browser-bar {
+    background: #f0f0f0; padding: 8px 14px; display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid #d4d4d4; flex-shrink: 0;
+  }
+  .store-browser-bar .dots span {
+    display: inline-block; width: 11px; height: 11px; border-radius: 50%;
+    margin-right: 6px; vertical-align: middle;
+  }
+  .store-browser-bar .dots span:nth-child(1) { background: #ff5f57; }
+  .store-browser-bar .dots span:nth-child(2) { background: #ffbd2e; }
+  .store-browser-bar .dots span:nth-child(3) { background: #28c940; }
+  .store-browser-bar .url {
+    flex: 1; background: white; border-radius: 14px; padding: 4px 12px;
+    font-size: 12px; color: #333; border: 1px solid #d4d4d4;
+  }
+
+  .store-header {
+    background: #000; padding: 12px 28px; display: flex; align-items: center; gap: 24px;
+    color: white; flex-shrink: 0;
+  }
+  .store-header .nav-link { color: white; font-size: 13px; cursor: pointer; }
+  .store-logo {
+    color: #f7e500; font-weight: 900; font-style: italic; font-size: 30px;
+    letter-spacing: -1px; transform: skewX(-8deg); margin-right: 18px;
+  }
+  .store-logo small { font-size: 9px; letter-spacing: 3px; display: block; }
+  .store-header .acct-pill {
+    background: #f7e500; color: #111; padding: 4px 12px; font-size: 11px; font-weight: 700;
+    border-radius: 2px;
+  }
+  .store-header .cat-pill {
+    background: transparent; color: white; padding: 4px 12px; font-size: 13px;
+    border: 1px solid white; border-radius: 2px; cursor: pointer;
+  }
+  .store-header .cat-pill-y {
+    background: #f7e500; color: #111; padding: 4px 12px; font-size: 11px; font-weight: 700;
+    border-radius: 2px;
+  }
+  .store-header .right { margin-left: auto; display: flex; align-items: center; gap: 16px; font-size: 13px; }
+  .store-header .search-box {
+    background: white; padding: 6px 12px; border-radius: 2px; color: #888;
+    font-size: 12px; min-width: 220px;
+  }
+  .store-cart-pill { color: #f7e500; font-weight: 700; font-size: 13px; }
+
+  .store-catalogue-bar {
+    background: #f7e500; padding: 8px 28px; font-weight: 700; font-size: 13px;
+    color: #111; letter-spacing: 1px;
+  }
+
+  .store-body { flex: 1; display: flex; overflow: hidden; }
+  .store-sidebar {
+    width: 220px; background: #fafafa; padding: 18px 16px; border-right: 1px solid #e4e4e4;
+    overflow-y: auto;
+  }
+  .store-cat {
+    background: #e8e8e8; padding: 10px 14px; margin-bottom: 6px; font-weight: 700;
+    font-size: 12px; cursor: pointer; transition: background 0.2s;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .store-cat:hover { background: #d8d8d8; }
+  .store-cat.active { background: #111; color: white; }
+  .store-cat .chev { font-size: 10px; color: #888; }
+  .store-cat.active .chev { color: white; }
+  .store-subcats {
+    display: none; padding: 4px 0 8px;
+  }
+  .store-cat.expanded + .store-subcats { display: block; }
+  .store-subcat {
+    padding: 8px 14px 8px 18px; font-size: 12px; cursor: pointer; color: #333;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .store-subcat:hover { background: #f5f5f5; }
+  .store-subcat.active { background: #f7e500; font-weight: 700; }
+
+  .store-content {
+    flex: 1; padding: 24px 28px; overflow-y: auto; background: white;
+  }
+  .store-dashboard h1 {
+    font-size: 22px; font-weight: 700; margin-bottom: 4px;
+  }
+  .store-dashboard .sub { font-size: 12px; color: #888; margin-bottom: 24px; }
+  .store-tiles { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; max-width: 720px; }
+  .store-tile {
+    border: 1px solid #e4e4e4; padding: 22px 14px; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .store-tile .tile-icon {
+    width: 50px; height: 50px; background: #111; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; color: #f7e500; font-size: 22px;
+  }
+  .store-tile .tile-title { font-weight: 700; font-size: 13px; }
+  .store-tile .tile-sub { font-size: 10px; color: #888; }
+
+  /* Product grid */
+  .store-products-bc {
+    font-size: 12px; color: #777; margin-bottom: 8px;
+  }
+  .store-products-bc .crumb-cur { color: #111; font-weight: 600; }
+  .store-products-title {
+    font-size: 26px; font-weight: 700; margin-bottom: 16px;
+  }
+  .store-products-sortbar {
+    background: #f5f5f5; padding: 8px 14px; display: flex; align-items: center;
+    font-size: 12px; gap: 14px; margin-bottom: 14px; border: 1px solid #e4e4e4;
+  }
+  .store-products-sortbar .sort-input {
+    background: white; padding: 4px 22px 4px 10px; border: 1px solid #d4d4d4;
+    font-size: 12px; color: #888;
+  }
+  .store-product-row {
+    display: grid; grid-template-columns: 110px 1fr 180px 100px 140px;
+    align-items: center; padding: 14px 14px;
+    border-top: 1px solid #f0f0f0; gap: 14px;
+    opacity: 0; transform: translateY(8px); transition: opacity 0.5s, transform 0.5s;
+  }
+  .store-product-row.show { opacity: 1; transform: translateY(0); }
+  .store-product-row:hover { background: #fafafa; }
+  .store-product-img {
+    width: 90px; height: 90px; background: #f5f5f5; border-radius: 2px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .product-icon-svg { width: 70px; height: 70px; }
+  .store-product-info .star { color: #ccc; font-size: 14px; }
+  .store-product-info .sku { font-size: 10px; color: #888; margin: 2px 0; }
+  .store-product-info .name { font-weight: 700; font-size: 13px; }
+  .store-product-selects { display: flex; flex-direction: column; gap: 6px; }
+  .store-select {
+    border: 1px solid #d4d4d4; padding: 5px 8px; font-size: 11px; color: #888;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .store-product-qty {
+    display: flex; align-items: center; border: 1px solid #d4d4d4;
+  }
+  .store-product-qty button {
+    width: 24px; height: 26px; background: white; border: none; cursor: pointer; font-size: 13px;
+  }
+  .store-product-qty input {
+    width: 36px; height: 26px; border: none; border-left: 1px solid #d4d4d4;
+    border-right: 1px solid #d4d4d4; text-align: center; font-size: 12px;
+  }
+  .store-product-price { font-weight: 700; font-size: 15px; text-align: right; padding-right: 12px; }
+  .store-addcart {
+    background: #f7e500; color: #111; padding: 7px 14px; border: none; cursor: pointer;
+    font-weight: 700; font-size: 11px; display: flex; align-items: center; gap: 6px; justify-content: center;
+  }
+
+  /* ---------- Caption strip ---------- */
+  .caption-strip {
+    position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(180deg, rgba(14,16,21,0) 0%, rgba(14,16,21,0.92) 60%);
+    padding: 60px 40px 24px; color: white; pointer-events: none; z-index: 6;
+  }
+  .caption-strip .caption-step {
+    font-size: 10px; letter-spacing: 2px; color: #f97316; margin-bottom: 6px;
+  }
+  .caption-strip .caption-text {
+    font-size: 15px; line-height: 1.5; max-width: 880px;
+  }
+
+  /* Highlight ring */
+  .hl-ring {
+    position: absolute; border: 2px solid #f97316; border-radius: 4px;
+    box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.25);
+    pointer-events: none; z-index: 90; opacity: 0; transition: opacity 0.2s;
+  }
+  .hl-ring.show { opacity: 1; animation: hlPulse 1.4s ease-in-out infinite; }
+  @keyframes hlPulse {
+    0%, 100% { box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.25); }
+    50% { box-shadow: 0 0 0 8px rgba(249, 115, 22, 0.1); }
+  }
+</style>
+</head>
+<body>
+
+<div class="controls">
+  <h1>Catalogue Creation Workflow <span>— Commerce Vision → Pronto Xi → Customer</span></h1>
+  <div class="scene-indicator">
+    <span class="scene-dot active" data-scene="0"></span>
+    <span class="scene-dot" data-scene="1"></span>
+    <span class="scene-dot" data-scene="2"></span>
+    <span class="scene-dot" data-scene="3"></span>
+    <span class="scene-dot" data-scene="4"></span>
+    <span class="scene-dot" data-scene="5"></span>
+    <span class="scene-dot" data-scene="6"></span>
+    <span class="scene-dot" data-scene="7"></span>
+    <span class="scene-dot" data-scene="8"></span>
+    <span class="scene-dot" data-scene="9"></span>
+    <span class="scene-label" id="sceneLabel">Scene 1 / 10 — Navigate to Catalogue Maintenance</span>
+  </div>
+  <button class="btn" id="prevBtn">◀ Previous</button>
+  <button class="btn primary" id="playBtn">▶ Play scene</button>
+  <button class="btn" id="nextBtn">Next ▶</button>
+  <button class="btn" id="restartBtn">⟲ Restart</button>
+</div>
+
+<div class="stage" id="stage">
+
+  <!-- ============================================================ -->
+  <!-- SCENE 0: Open Catalogue Maintenance -->
+  <!-- ============================================================ -->
+  <div class="scene active" data-scene="0">
+    <div class="scene-title"><strong>SCENE 1</strong> &nbsp;·&nbsp; Open Catalogue Maintenance</div>
+    <div class="browser">
+      <div class="browser-bar">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="browser-url"><span class="lock">🔒</span>https://cms.commercevision.biz/</div>
+      </div>
+      <div class="browser-body" style="position: relative;">
+        <div class="cv-sidebar">
+          <div class="cv-logo"><span class="cv-mark">CV</span> ecommerce<span class="cv-sub">BY COMMERCE VISION</span></div>
+          <div class="cv-section-label">E-COMMERCE</div>
+          <div class="cv-nav-item">👥 Users</div>
+          <div class="cv-nav-item" id="s0-products-cats">📦 Products &amp; Categories</div>
+          <div class="cv-nav-item">📢 Campaigns &amp; Promotions</div>
+          <div class="cv-nav-item">📊 Reporting</div>
+          <div class="cv-nav-item">🛒 Orders</div>
+          <div class="cv-nav-item">🔍 Search Analytics</div>
+          <div class="cv-section-label">CONTENT</div>
+          <div class="cv-nav-item">📄 Content</div>
+          <div class="cv-nav-item">⚙️ Settings</div>
+        </div>
+
+        <div class="cv-submenu" id="s0-submenu">
+          <div class="cv-submenu-item"><span class="arrow">›</span>Product Features</div>
+          <div class="cv-submenu-item"><span class="arrow">›</span>Product Restrictions</div>
+          <div class="cv-submenu-item"><span class="arrow">›</span>Product Enquiry</div>
+          <div class="cv-submenu-item"><span class="arrow">›</span>Product Category Import</div>
+          <div class="cv-submenu-item"><span class="arrow">›</span>Product Review Approval</div>
+          <div class="cv-submenu-item"><span class="arrow">›</span>Product Attribute Maintenance</div>
+          <div class="cv-submenu-item" id="s0-cat-maint"><span class="arrow">›</span>Catalogue Maintenance</div>
+        </div>
+
+        <div class="cv-main">
+          <div class="cv-topbar">
+            <div class="cms-label">CMS</div>
+            <div class="env-pill">🌐 RSEA Stage <span>×</span></div>
+            <div class="env-pill"><span class="stage-pill">STAGE</span> <span class="url-text">https://rseastage.commerce.vision</span> <span class="version">Version 4.41.02</span></div>
+            <div class="user">👤 John Xie ▾</div>
+          </div>
+          <div class="cv-content">
+            <h2 style="font-size: 18px; color: #333; margin-bottom: 16px;">Welcome back, John Xie</h2>
+            <div style="background: white; padding: 18px; border: 1px solid #e4e4e4; border-radius: 4px; color: #555; line-height: 1.6; font-size: 13px;">
+              <strong style="color: #d97706;">Latest News</strong><br><br>
+              <strong>Introducing AIVA (AI Virtual Assistant)</strong> — a powerful new AI-driven feature designed to help you get the most out of CVE.<br><br>
+              <strong>Action Required: Zip Pay Endpoint Update</strong> &nbsp; · &nbsp; Feb 20, 2026<br>
+              Zip Pay has updated the API endpoints for its Buy Now, Pay Later service. All sellers using Zip Pay through our integration must update their configuration.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cursor" id="cursor0"></div>
+
+    <div class="caption-strip">
+      <div class="caption-step" id="s0-step">STEP 1</div>
+      <div class="caption-text" id="s0-caption">Sign in to the Commerce Vision CMS at <strong>cms.commercevision.biz</strong>. Catalogues are managed under <em>Products &amp; Categories → Catalogue Maintenance</em>.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SCENE 1: New Catalogue dialog -->
+  <!-- ============================================================ -->
+  <div class="scene" data-scene="1">
+    <div class="scene-title"><strong>SCENE 2</strong> &nbsp;·&nbsp; Create New Catalogue</div>
+    <div class="browser">
+      <div class="browser-bar">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="browser-url"><span class="lock">🔒</span>https://cms.commercevision.biz/CatalogueMaintenance</div>
+      </div>
+      <div class="browser-body">
+        <div class="cv-sidebar">
+          <div class="cv-logo"><span class="cv-mark">CV</span> ecommerce<span class="cv-sub">BY COMMERCE VISION</span></div>
+          <div class="cv-section-label">E-COMMERCE</div>
+          <div class="cv-nav-item">👥 Users</div>
+          <div class="cv-nav-item highlight">📦 Products &amp; Categories</div>
+          <div class="cv-nav-item">📢 Campaigns &amp; Promotions</div>
+          <div class="cv-nav-item">📊 Reporting</div>
+          <div class="cv-nav-item">🛒 Orders</div>
+          <div class="cv-section-label">CONTENT</div>
+          <div class="cv-nav-item">📄 Content</div>
+        </div>
+
+        <div class="cv-main">
+          <div class="cv-topbar">
+            <div class="cms-label">CMS</div>
+            <div class="env-pill">🌐 RSEA Stage</div>
+            <div class="env-pill"><span class="stage-pill">STAGE</span> <span class="url-text">https://rseastage.commerce.vision</span></div>
+            <div class="user">👤 John Xie ▾</div>
+          </div>
+          <div class="cv-content">
+            <h3 style="color: #333; margin-bottom: 12px; font-size: 15px;">Catalogue Maintenance</h3>
+            <div style="background: white; border: 1px solid #d4d4d4; border-radius: 4px; padding: 10px; font-size: 12px; color: #555; max-height: 320px; overflow: hidden;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="border-bottom: 1px solid #e4e4e4; color: #888;">
+                    <th style="padding: 6px; text-align: left;"></th>
+                    <th style="padding: 6px; text-align: left;">Code</th>
+                    <th style="padding: 6px; text-align: left;">Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>○</td><td>ABBTEST</td><td>ABB Australia Test Catalogue</td></tr>
+                  <tr><td>○</td><td>ABNCONTRA</td><td>ABN Contracting Custom Catalogue</td></tr>
+                  <tr><td>○</td><td>ABNCOSBO</td><td>ABN Corporate Services</td></tr>
+                  <tr><td>○</td><td>ACCECRAN</td><td>Access Boring</td></tr>
+                  <tr><td>○</td><td>ACCEMONT</td><td>ACCESS EXPRESS - EAST</td></tr>
+                  <tr><td>○</td><td>ACCERPERT</td><td>Accelerate Comms Enoggera Catalogue</td></tr>
+                  <tr><td>○</td><td>ACCEREGE</td><td>ACCESS EXPRESS - WEST</td></tr>
+                  <tr><td>○</td><td>ACCESSE</td><td>ACCESS SERVICES Catalogue</td></tr>
+                </tbody>
+              </table>
+              <div style="padding: 10px; border-top: 1px solid #e4e4e4; margin-top: 8px; color: #2f5b8a;">
+                <span>📝 Modify</span> | <span id="s1-new" style="position: relative; cursor: pointer;">New</span> | <span>Delete</span> | <span>Configure Catalogue</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-backdrop" id="s1-modal">
+      <div class="modal">
+        <div class="modal-header">New Catalogue</div>
+        <div class="modal-body">
+          <div class="field-row">
+            <div class="field-label">Code:</div>
+            <input id="s1-code" placeholder="">
+          </div>
+          <div class="field-row">
+            <div class="field-label">Description:</div>
+            <input id="s1-desc" placeholder="">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cv" id="s1-ok">OK</button>
+          <button class="btn-cv">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="cursor" id="cursor1"></div>
+
+    <div class="caption-strip">
+      <div class="caption-step" id="s1-step">STEP 2 — Create</div>
+      <div class="caption-text" id="s1-caption">Click <strong>New</strong>. Enter a <strong>Code</strong> (here: <em>AcidgreenWoven</em>) and a <strong>Description</strong> (<em>Test Catalg</em>). This creates the catalogue record that will hold the category structure and product assignments.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SCENE 2: Build category tree -->
+  <!-- ============================================================ -->
+  <div class="scene" data-scene="2">
+    <div class="scene-title"><strong>SCENE 3</strong> &nbsp;·&nbsp; Build Category Hierarchy</div>
+    <div class="browser">
+      <div class="browser-bar">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="browser-url"><span class="lock">🔒</span>https://cms.commercevision.biz/Catalogue/Configure</div>
+      </div>
+      <div class="browser-body">
+        <div class="cv-sidebar">
+          <div class="cv-logo"><span class="cv-mark">CV</span> ecommerce<span class="cv-sub">BY COMMERCE VISION</span></div>
+          <div class="cv-section-label">E-COMMERCE</div>
+          <div class="cv-nav-item">👥 Users</div>
+          <div class="cv-nav-item highlight">📦 Products &amp; Categories</div>
+          <div class="cv-nav-item">📢 Campaigns &amp; Promotions</div>
+        </div>
+
+        <div class="cv-main">
+          <div class="cv-topbar">
+            <div class="cms-label">CMS</div>
+            <div class="env-pill">🌐 RSEA Stage</div>
+            <div class="env-pill"><span class="stage-pill">STAGE</span> <span class="url-text">https://rseastage.commerce.vision</span></div>
+            <div class="user">👤 John Xie ▾</div>
+          </div>
+          <div class="cv-content">
+            <div class="cv-page-bar">
+              <a>‹ Back to Catalogue Maintenance</a>
+              <a>Help</a>
+              <button class="btn-bar">💾 Save</button>
+              <button class="btn-bar">📥 Import...</button>
+              <button class="btn-bar">📤 Export Catalogue</button>
+              <div class="catalogue-label">Catalogue: Test Catalg (AcidgreenWoven)</div>
+            </div>
+            <div class="cv-pane">
+              <div class="cv-tree" id="s2-tree">
+                <div class="tree-node show expanded" data-node="acidgreen"><span class="tree-label">Acidgreen</span>
+                  <div class="tree-children">
+                    <div class="tree-node leaf" data-node="adobe"><span class="tree-label">Adobe Commerce</span></div>
+                    <div class="tree-node leaf" data-node="shopify"><span class="tree-label">Shopify</span></div>
+                  </div>
+                </div>
+                <div class="tree-node expanded" data-node="woven"><span class="tree-label">Woven</span>
+                  <div class="tree-children">
+                    <div class="tree-node leaf" data-node="pronto"><span class="tree-label">Pronto Xi Sync</span></div>
+                    <div class="tree-node leaf" data-node="avenue"><span class="tree-label">Avenue</span></div>
+                  </div>
+                </div>
+              </div>
+              <div class="cv-tabs-wrap">
+                <div class="cv-tabs">
+                  <div class="cv-tab active">Details</div>
+                  <div class="cv-tab">Products</div>
+                  <div class="cv-tab">Cluster</div>
+                  <div class="cv-tab">Delivery Options</div>
+                </div>
+                <div class="cv-tab-content">
+                  <div class="field-row"><div class="field-label">Category Code:</div><div class="field-static" id="s2-code">C_TEMPID_1</div></div>
+                  <div class="field-row"><div class="field-label">Description:</div><div class="field-static" id="s2-desc">Acidgreen</div></div>
+                  <div class="field-row"><div class="field-label">Parent Code:</div><div class="field-static" id="s2-parent">None</div></div>
+                  <div class="field-row"><div class="field-label">Template:</div><select class="field-select"><option>Please Select..</option></select></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cursor" id="cursor2"></div>
+    <div class="caption-strip">
+      <div class="caption-step" id="s2-step">STEP 3 — Configure</div>
+      <div class="caption-text" id="s2-caption">In <strong>Configure Catalogue</strong>, build the category tree. Right-click to add parents and children: <em>Acidgreen</em> and <em>Woven</em> are top-level; each has its own platform children — <em>Adobe Commerce</em>, <em>Shopify</em>, <em>Pronto Xi Sync</em>, <em>Avenue</em>.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SCENE 3: Assign products -->
+  <!-- ============================================================ -->
+  <div class="scene" data-scene="3">
+    <div class="scene-title"><strong>SCENE 4</strong> &nbsp;·&nbsp; Assign Products to Categories</div>
+    <div class="browser">
+      <div class="browser-bar">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="browser-url"><span class="lock">🔒</span>https://cms.commercevision.biz/Catalogue/Configure</div>
+      </div>
+      <div class="browser-body">
+        <div class="cv-sidebar">
+          <div class="cv-logo"><span class="cv-mark">CV</span> ecommerce<span class="cv-sub">BY COMMERCE VISION</span></div>
+          <div class="cv-section-label">E-COMMERCE</div>
+          <div class="cv-nav-item highlight">📦 Products &amp; Categories</div>
+        </div>
+
+        <div class="cv-main">
+          <div class="cv-topbar">
+            <div class="cms-label">CMS</div>
+            <div class="env-pill">🌐 RSEA Stage</div>
+            <div class="env-pill"><span class="stage-pill">STAGE</span> <span class="url-text">https://rseastage.commerce.vision</span></div>
+            <div class="user">👤 John Xie ▾</div>
+          </div>
+          <div class="cv-content">
+            <div class="cv-page-bar">
+              <a>‹ Back to Catalogue Maintenance</a>
+              <a>Help</a>
+              <button class="btn-bar">💾 Save</button>
+              <button class="btn-bar">📥 Import...</button>
+              <button class="btn-bar">📤 Export Catalogue</button>
+              <div class="catalogue-label">Catalogue: Test Catalg (AcidgreenWoven)</div>
+            </div>
+            <div class="cv-pane">
+              <div class="cv-tree" id="s3-tree">
+                <div class="tree-node show expanded"><span class="tree-label">Acidgreen</span>
+                  <div class="tree-children">
+                    <div class="tree-node leaf show" data-node="adobe" id="s3-cat-adobe"><span class="tree-label">Adobe Commerce</span></div>
+                    <div class="tree-node leaf show" data-node="shopify" id="s3-cat-shopify"><span class="tree-label">Shopify</span></div>
+                  </div>
+                </div>
+                <div class="tree-node show expanded"><span class="tree-label">Woven</span>
+                  <div class="tree-children">
+                    <div class="tree-node leaf show" data-node="pronto" id="s3-cat-pronto"><span class="tree-label">Pronto Xi Sync</span></div>
+                    <div class="tree-node leaf show" data-node="avenue" id="s3-cat-avenue"><span class="tree-label">Avenue</span></div>
+                  </div>
+                </div>
+              </div>
+              <div class="cv-tabs-wrap">
+                <div class="cv-tabs">
+                  <div class="cv-tab">Details</div>
+                  <div class="cv-tab active">Products</div>
+                  <div class="cv-tab">Cluster</div>
+                  <div class="cv-tab">Delivery Options</div>
+                </div>
+                <div class="cv-tab-content">
+                  <div style="font-size: 12px; color: #888; margin-bottom: 10px;">Selected category: <strong style="color: #d97706;" id="s3-currentcat">Adobe Commerce</strong></div>
+
+                  <div class="selected-products">
+                    <div class="label">Selected Products | <span style="color: #666; font-weight: 400;">Clear List</span></div>
+                    <div class="selected-row" id="s3-sel-1"><span>ELEVEN Workwear Stretch Belt with Plastic Buckle</span><span style="color: #888;">E3910____</span></div>
+                    <div class="selected-row" id="s3-sel-2"><span>Biz Collection Women's Cool Stretch Maternity Pant</span><span style="color: #888;">10100____</span></div>
+                    <div class="selected-row" id="s3-sel-3"><span>ELEVEN Workwear Evolution Cotton Drill Work Pant</span><span style="color: #888;">E1100____</span></div>
+                    <div class="selected-row" id="s3-sel-4"><span>ELEVEN Workwear AEROCOOL Cotton Ripstop Work Pant</span><span style="color: #888;">E1170____</span></div>
+                  </div>
+
+                  <div class="search-row">
+                    <button class="btn-cv">📥 Import products...</button>
+                    <input class="search-input" id="s3-search" placeholder="Search...">
+                    <button class="btn-cv" id="s3-search-btn">▲ Search</button>
+                    <button class="btn-cv" id="s3-add-btn">▲ Add</button>
+                  </div>
+
+                  <div class="product-results" id="s3-results" style="display: none;">
+                    <div class="group-header" id="s3-result-name"><span>ELEVEN Workwear Stretch Belt with Plastic Buckle</span><span style="color: #888;">E3910____</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cursor" id="cursor3"></div>
+    <div class="caption-strip">
+      <div class="caption-step" id="s3-step">STEP 4 — Products</div>
+      <div class="caption-text" id="s3-caption">For each leaf category, switch to the <strong>Products</strong> tab and search by SKU pattern. Wildcard patterns (e.g. <em>E3910____</em>) return product families. Selected products are assigned to the active category.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SCENE 4: Save, capture Category Code, Export -->
+  <!-- ============================================================ -->
+  <div class="scene" data-scene="4">
+    <div class="scene-title"><strong>SCENE 5</strong> &nbsp;·&nbsp; Save &amp; Export for Pronto Hand-off</div>
+    <div class="browser">
+      <div class="browser-bar">
+        <div class="browser-dots"><span></span><span></span><span></span></div>
+        <div class="browser-url"><span class="lock">🔒</span>https://cms.commercevision.biz/Catalogue/Configure</div>
+      </div>
+      <div class="browser-body">
+        <div class="cv-sidebar">
+          <div class="cv-logo"><span class="cv-mark">CV</span> ecommerce<span class="cv-sub">BY COMMERCE VISION</span></div>
+          <div class="cv-section-label">E-COMMERCE</div>
+          <div class="cv-nav-item highlight">📦 Products &amp; Categories</div>
+        </div>
+
+        <div class="cv-main">
+          <div class="cv-topbar">
+            <div class="cms-label">CMS</div>
+            <div class="env-pill">🌐 RSEA Stage</div>
+            <div class="env-pill"><span class="stage-pill">STAGE</span> <span class="url-text">https://rseastage.commerce.vision</span></div>
+            <div class="user">👤 John Xie ▾</div>
+          </div>
+          <div class="cv-content">
+            <div class="cv-page-bar">
+              <a>‹ Back to Catalogue Maintenance</a>
+              <a>Help</a>
+              <button class="btn-bar" id="s4-save">💾 Save</button>
+              <button class="btn-bar">📥 Import...</button>
+              <button class="btn-bar" id="s4-export">📤 Export Catalogue</button>
+              <div class="catalogue-label">Catalogue: Test Catalg (AcidgreenWoven)</div>
+            </div>
+            <div class="cv-pane">
+              <div class="cv-tree">
+                <div class="tree-node show expanded"><span class="tree-label">Acidgreen</span>
+                  <div class="tree-children">
+                    <div class="tree-node leaf show selected" id="s4-adobenode"><span class="tree-label">Adobe Commerce</span></div>
+                    <div class="tree-node leaf show"><span class="tree-label">Shopify</span></div>
+                  </div>
+                </div>
+                <div class="tree-node show expanded"><span class="tree-label">Woven</span>
+                  <div class="tree-children">
+                    <div class="tree-node leaf show"><span class="tree-label">Pronto Xi Sync</span></div>
+                    <div class="tree-node leaf show"><span class="tree-label">Avenue</span></div>
+                  </div>
+                </div>
+              </div>
+              <div class="cv-tabs-wrap">
+                <div class="cv-tabs">
+                  <div class="cv-tab active">Details</div>
+                  <div class="cv-tab">Products</div>
+                  <div class="cv-tab">Cluster</div>
+                  <div class="cv-tab">Delivery Options</div>
+                </div>
+                <div class="cv-tab-content">
+                  <div class="field-row"><div class="field-label">Category Code:</div><div class="field-value" id="s4-code">C_22742</div></div>
+                  <div class="field-row"><div class="field-label">Description:</div><div class="field-static">Adobe Commerce</div></div>
+                  <div class="field-row"><div class="field-label">Parent Code:</div><div class="field-static">C_22740</div></div>
+                  <div class="field-row"><div class="field-label">Template:</div><select class="field-select"><option>Please Select..</option></select></div>
+
+                  <!-- Export indicator -->
+                  <div id="s4-csv" style="margin-top: 30px; opacity: 0; transition: opacity 0.5s;">
+                    <div style="background: #f5f8fb; border: 1px solid #cdd9e4; padding: 14px; border-radius: 4px; max-width: 480px;">
+                      <div style="font-size: 12px; color: #2f5b8a; font-weight: 600; margin-bottom: 8px;">📄 AcidgreenWoven_Export.csv</div>
+                      <table style="width: 100%; font-family: 'Consolas', monospace; font-size: 11px; color: #444; border-collapse: collapse;">
+                        <tr style="background: #e8eef4;">
+                          <th style="padding: 4px 8px; text-align: left;">CategoryCode</th>
+                          <th style="padding: 4px 8px; text-align: left;">ProductCode</th>
+                          <th style="padding: 4px 8px; text-align: left;">Description</th>
+                        </tr>
+                        <tr><td style="padding: 4px 8px;">C_22742</td><td style="padding: 4px 8px;">E3910____</td><td style="padding: 4px 8px;">ELEVEN Workwear Stretch Belt</td></tr>
+                        <tr><td style="padding: 4px 8px;">C_22743</td><td style="padding: 4px 8px;">10100____</td><td style="padding: 4px 8px;">Biz Collection Maternity Pant</td></tr>
+                        <tr><td style="padding: 4px 8px;">C_22744</td><td style="padding: 4px 8px;">E1100____</td><td style="padding: 4px 8px;">ELEVEN Evolution Cotton Drill</td></tr>
+                        <tr><td style="padding: 4px 8px;">C_22745</td><td style="padding: 4px 8px;">E1170____</td><td style="padding: 4px 8px;">ELEVEN AEROCOOL Cotton Ripstop</td></tr>
+                      </table>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cursor" id="cursor4"></div>
+    <div class="caption-strip">
+      <div class="caption-step" id="s4-step">STEP 5 — Hand-off</div>
+      <div class="caption-text" id="s4-caption">Click <strong>Save</strong>, then capture the generated <strong>Category Code</strong> (e.g. <em>C_22742</em>). Use <strong>Export Catalogue</strong> to download the CSV pairing category codes with product codes — this becomes the source for the Pronto import.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SCENE 5: Transition Commerce Vision → Pronto Xi -->
+  <!-- ============================================================ -->
+  <div class="scene" data-scene="5">
+    <div class="scene-title"><strong>SCENE 6</strong> &nbsp;·&nbsp; Hand-off to Pronto Xi</div>
+    <div class="transition-stage" id="s5-stage">
+      <div class="trans-row">
+        <div class="trans-panel cv" id="s5-cv">
+          <div class="tp-header">Commerce Vision</div>
+          <div class="tp-icon">🛒</div>
+          <div class="tp-title">Catalogue Built</div>
+          <div class="tp-sub">AcidgreenWoven<br>4 categories, 4 products<br>CSV ready</div>
+        </div>
+        <div class="trans-flow-arrow" id="s5-arrow"></div>
+        <div class="trans-panel pronto" id="s5-pronto">
+          <div class="tp-header">Pronto Xi</div>
+          <div class="tp-icon">📋</div>
+          <div class="tp-title">Web Catalogue</div>
+          <div class="tp-sub">Inventory →<br>Web CSS Menu →<br>Web Catalogue</div>
+        </div>
+      </div>
+      <div class="csv-packet" id="s5-packet" style="opacity: 0;">AcidgreenWoven_Export.csv</div>
+    </div>
+    <div class="caption-strip">
+      <div class="caption-step" id="s5-step">TRANSITION</div>
+      <div class="caption-text" id="s5-caption">The exported CSV becomes the source for the matching product-line entries in Pronto Xi. The next phase of the workflow happens inside the Pronto Xi ERP, under <strong>Inventory → Web CSS Menu → Web Catalogue</strong>.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SCENE 6: Pronto Xi - Navigate Inventory → Web CSS Menu → Web Catalogue -->
+  <!-- ============================================================ -->
+  <div class="scene" data-scene="6">
+    <div class="scene-title"><strong>SCENE 7</strong> &nbsp;·&nbsp; Pronto Xi — Navigate to Web Catalogue</div>
+    <div class="pronto-window">
+      <div class="pronto-titlebar-bar">
+        <div class="p-logo">Px</div>
+        <div class="title">Pronto Xi — RSEA - Aus Pty Ltd - TEST</div>
+        <div class="win-controls">
+          <div class="win-btn">_</div>
+          <div class="win-btn">▢</div>
+          <div class="win-btn">✕</div>
+        </div>
+      </div>
+      <div class="pronto-tabs">
+        <div class="ptab active">Home</div>
+        <div class="ptab">Settings</div>
+        <div class="ptab">Navigation</div>
+        <div class="ptab">Keyboard</div>
+        <div class="ptab">Help</div>
+      </div>
+      <div class="pronto-ribbon">
+        <div class="ribbon-group">
+          <div class="ribbon-group-content">
+            <div class="ribbon-btns-stack">
+              <div class="ribbon-btn small"><span class="icon">✂️</span>Cut</div>
+              <div class="ribbon-btn small"><span class="icon">📋</span>Copy Field</div>
+              <div class="ribbon-btn small"><span class="icon">↶</span>Undo</div>
+            </div>
+            <div class="ribbon-btn large"><span class="icon">📄</span>Copy</div>
+            <div class="ribbon-btn large"><span class="icon">📋</span>Paste</div>
+          </div>
+          <div class="ribbon-group-label">Clipboard</div>
+        </div>
+        <div class="ribbon-group">
+          <div class="ribbon-group-content">
+            <div class="ribbon-btn large"><span class="icon" style="color: #d97706;">🔑</span>Hot Key</div>
+            <div class="ribbon-btn large"><span class="icon">⌨️</span>Shortcuts</div>
+            <div class="ribbon-btn large"><span class="icon" style="color: #c4341c;">❤️</span>Favourites</div>
+          </div>
+          <div class="ribbon-group-label">Tools</div>
+        </div>
+        <div class="ribbon-group">
+          <div class="ribbon-group-content">
+            <div class="ribbon-btns-stack">
+              <div class="ribbon-btn small"><span class="icon">🧮</span>Calculator</div>
+              <div class="ribbon-btn small"><span class="icon">📊</span>Reports</div>
+            </div>
+            <div class="ribbon-btns-stack">
+              <div class="ribbon-btn small"><span class="icon">🚀</span>Launch Admin</div>
+            </div>
+          </div>
+          <div class="ribbon-group-label">Quick Links</div>
+        </div>
+        <div class="ribbon-group">
+          <div class="ribbon-group-content">
+            <div class="ribbon-btn large"><span class="icon">📤</span>Export</div>
+            <div class="ribbon-btn large"><span class="icon">📑</span>Report</div>
+            <div class="ribbon-btn large"><span class="icon">⚙️</span>Custom</div>
+          </div>
+          <div class="ribbon-group-label">Data Grid Export</div>
+        </div>
+        <div class="ribbon-group">
+          <div class="ribbon-group-content">
+            <div class="ribbon-btn large"><span class="icon">💾</span>Save As</div>
+            <div class="ribbon-btn large"><span class="icon">⚙️</span>Make Default</div>
+            <div class="ribbon-btn large"><span class="icon">↩️</span>Restore Columns</div>
+            <div class="ribbon-btns-stack">
+              <div class="ribbon-btn small"><span class="icon">✏️</span>Rename</div>
+              <div class="ribbon-btn small"><span class="icon">🗑️</span>Delete</div>
+              <div class="ribbon-btn small"><span class="icon">✓</span>Select</div>
+            </div>
+          </div>
+          <div class="ribbon-group-label">Data Grid Views</div>
+        </div>
+        <div class="ribbon-group">
+          <div class="ribbon-group-content">
+            <div class="ribbon-btn large"><span class="icon">⬅️</span>Back</div>
+            <div class="ribbon-btn large"><span class="icon">➡️</span>Forward</div>
+            <div class="ribbon-btns-stack">
+              <div class="ribbon-btn small"><span class="icon" style="color: #c4341c;">⏹</span>Stop</div>
+              <div class="ribbon-btn small"><span class="icon">🔄</span>Refresh</div>
+              <div class="ribbon-btn small"><span class="icon">🏠</span>Home</div>
+            </div>
+          </div>
+          <div class="ribbon-group-label">Web Navigation</div>
+        </div>
+        <div class="ribbon-group">
+          <div class="ribbon-group-content">
+            <div class="ribbon-btns-stack">
+              <div class="ribbon-btn small"><span class="icon">👁</span>Show</div>
+              <div class="ribbon-btn small"><span class="icon">↩</span>Restore</div>
+            </div>
+          </div>
+          <div class="ribbon-group-label">Web Pane</div>
+        </div>
+        <div class="ribbon-group">
+          <div class="ribbon-group-content">
+            <div class="ribbon-btn large" style="color: white; background: linear-gradient(180deg, #6fad4f 0%, #4d8a30 100%); border: 1px solid #3a6920; border-radius: 2px; padding: 4px 8px;"><span class="icon" style="color: white;">＋</span>New Session</div>
+          </div>
+          <div class="ribbon-group-label">&nbsp;</div>
+        </div>
+      </div>
+      <div class="pronto-body-split">
+        <div class="pronto-tree">
+          <div class="pronto-tree-header">Pronto Xi <span class="pin">📌</span> <span>✕</span></div>
+          <div class="p-tree-node expanded" style="padding-left: 6px;">
+            <div class="p-label"><span class="p-icon">📁</span>Company Selection</div>
+            <div class="p-tree-children">
+              <div class="p-tree-node expanded">
+                <div class="p-label"><span class="p-icon">🏢</span>RSEA - Aus Pty Ltd - TEST</div>
+                <div class="p-tree-children">
+                  <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">⭐</span>Favourites</div></div>
+                  <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📁</span>Product Team</div></div>
+                  <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📁</span>Direct Sales</div></div>
+                  <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📁</span>Store Managers</div></div>
+                  <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📁</span>Customer Relationship Management</div></div>
+                  <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📁</span>Accounts Receivable</div></div>
+                  <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📁</span>Accounts Payable</div></div>
+                  <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📁</span>General Ledger</div></div>
+                  <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📁</span>Rep Commission System</div></div>
+
+                  <div class="p-tree-node" id="s6-inventory">
+                    <div class="p-label"><span class="p-icon">📁</span>Inventory</div>
+                    <div class="p-tree-children">
+                      <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📄</span>Inventory Enquiry Console</div></div>
+                      <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📄</span>Inventory Enquiry</div></div>
+                      <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📄</span>Selective Inventory Enquiry</div></div>
+                      <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📁</span>Inventory Forms</div></div>
+                      <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📁</span>Inventory Transactions</div></div>
+                      <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📁</span>Maintain Inventory</div></div>
+                      <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📁</span>Maintain Budgets/Forecasts</div></div>
+                      <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📁</span>Prices Control</div></div>
+                      <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📁</span>Costs Control</div></div>
+
+                      <div class="p-tree-node" id="s6-webcss">
+                        <div class="p-label"><span class="p-icon" style="color: #2a8aae;">🌐</span>Web CSS Menu</div>
+                        <div class="p-tree-children">
+                          <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📄</span>Meta Data Maintain</div></div>
+                          <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📄</span>Maintain Meta Data against Product Group</div></div>
+                          <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📄</span>Reset Metadata Codes</div></div>
+                          <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon" style="color: #2a8aae;">🌐</span>CSS Web Product Maintenance</div></div>
+                          <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📄</span>Web Healthcheck</div></div>
+                          <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📄</span>Web Debtor Stock Restrictions</div></div>
+                          <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📄</span>Web Colour Restrictions</div></div>
+                          <div class="p-tree-node leaf" id="s6-webcat"><div class="p-label"><span class="p-icon">📄</span>Web Catalogue</div></div>
+                          <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📄</span>Web Catalogue Link to Customers</div></div>
+                          <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📄</span>Web Item Restrictions</div></div>
+                          <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📄</span>Web Complex Masks</div></div>
+                          <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📄</span>Web Customer Rules Admin</div></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="pronto-main">
+          <div class="rsea-notice">
+            <div class="rsea-notice-title">Pronto Xi Notice Board - Live Company Copy - Warning Notice</div>
+            <div class="rsea-notice-body">
+              <div class="rsea-banner">
+                <div class="rsea-logo-yellow">RSEA</div>
+                <span class="rsea-safety">SAFETY</span>
+              </div>
+              <div class="rsea-info-block">
+                <span class="live-copy">Live Company Copy</span><br><br>
+                <strong>Company: RSEA - Aus Pty Ltd</strong><br>
+                <strong>Copied: 19-DEC-2025 10:49:11</strong><br><br>
+                <span class="home-link">RSEA Pty Ltd - Home</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cursor" id="cursor6"></div>
+    <div class="caption-strip">
+      <div class="caption-step" id="s6-step">STEP 6 — Pronto Navigation</div>
+      <div class="caption-text" id="s6-caption">In Pronto Xi, the catalogue's product-line entries live under <strong>Inventory → Web CSS Menu → Web Catalogue</strong>. Expand the tree to that menu item.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SCENE 7: Pronto Xi - Maintain Item Security entry -->
+  <!-- ============================================================ -->
+  <div class="scene" data-scene="7">
+    <div class="scene-title"><strong>SCENE 8</strong> &nbsp;·&nbsp; Pronto Xi — Maintain Item Security (Entry)</div>
+    <div class="pronto-window">
+      <div class="pronto-titlebar-bar">
+        <div class="p-logo">Px</div>
+        <div class="title">Pronto Xi — RSEA - Aus Pty Ltd - TEST</div>
+        <div class="win-controls">
+          <div class="win-btn">_</div>
+          <div class="win-btn">▢</div>
+          <div class="win-btn">✕</div>
+        </div>
+      </div>
+      <div class="pronto-tabs">
+        <div class="ptab active">Home</div>
+        <div class="ptab">Settings</div>
+        <div class="ptab">Navigation</div>
+        <div class="ptab">Keyboard</div>
+        <div class="ptab">Help</div>
+      </div>
+      <div class="pronto-ribbon">
+        <div class="ribbon-group">
+          <div class="ribbon-group-content">
+            <div class="ribbon-btns-stack">
+              <div class="ribbon-btn small"><span class="icon">✂️</span>Cut</div>
+              <div class="ribbon-btn small"><span class="icon">📋</span>Copy Field</div>
+              <div class="ribbon-btn small"><span class="icon">↶</span>Undo</div>
+            </div>
+            <div class="ribbon-btn large"><span class="icon">📄</span>Copy</div>
+            <div class="ribbon-btn large"><span class="icon">📋</span>Paste</div>
+          </div>
+          <div class="ribbon-group-label">Clipboard</div>
+        </div>
+        <div class="ribbon-group">
+          <div class="ribbon-group-content">
+            <div class="ribbon-btn large"><span class="icon" style="color: #d97706;">🔑</span>Hot Key</div>
+            <div class="ribbon-btn large"><span class="icon">⌨️</span>Shortcuts</div>
+            <div class="ribbon-btn large"><span class="icon" style="color: #c4341c;">❤️</span>Favourites</div>
+          </div>
+          <div class="ribbon-group-label">Tools</div>
+        </div>
+        <div class="ribbon-group">
+          <div class="ribbon-group-content">
+            <div class="ribbon-btn large"><span class="icon">📤</span>Export</div>
+            <div class="ribbon-btn large"><span class="icon">📑</span>Report</div>
+            <div class="ribbon-btn large"><span class="icon">⚙️</span>Custom</div>
+          </div>
+          <div class="ribbon-group-label">Data Grid Export</div>
+        </div>
+        <div class="ribbon-group">
+          <div class="ribbon-group-content">
+            <div class="ribbon-btn large"><span class="icon">💾</span>Save As</div>
+            <div class="ribbon-btn large"><span class="icon">⚙️</span>Make Default</div>
+            <div class="ribbon-btn large"><span class="icon">↩️</span>Restore Columns</div>
+          </div>
+          <div class="ribbon-group-label">Data Grid Views</div>
+        </div>
+        <div class="ribbon-group">
+          <div class="ribbon-group-content">
+            <div class="ribbon-btn large"><span class="icon">⬅️</span>Back</div>
+            <div class="ribbon-btn large"><span class="icon">➡️</span>Forward</div>
+          </div>
+          <div class="ribbon-group-label">Web Navigation</div>
+        </div>
+      </div>
+      <div class="pronto-body-split">
+        <div class="pronto-tree">
+          <div class="pronto-tree-header">Pronto Xi <span class="pin">📌</span> <span>✕</span></div>
+          <div class="p-tree-node expanded" style="padding-left: 6px;">
+            <div class="p-label"><span class="p-icon">📁</span>Company Selection</div>
+            <div class="p-tree-children">
+              <div class="p-tree-node expanded">
+                <div class="p-label"><span class="p-icon">🏢</span>RSEA - Aus Pty Ltd - TEST</div>
+                <div class="p-tree-children">
+                  <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">⭐</span>Favourites</div></div>
+                  <div class="p-tree-node expanded">
+                    <div class="p-label"><span class="p-icon">📁</span>Inventory</div>
+                    <div class="p-tree-children">
+                      <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📄</span>Inventory Enquiry</div></div>
+                      <div class="p-tree-node expanded">
+                        <div class="p-label"><span class="p-icon" style="color: #2a8aae;">🌐</span>Web CSS Menu</div>
+                        <div class="p-tree-children">
+                          <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📄</span>Meta Data Maintain</div></div>
+                          <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📄</span>CSS Web Product Maintenance</div></div>
+                          <div class="p-tree-node leaf bold"><div class="p-label"><span class="p-icon">📄</span>Web Catalogue</div></div>
+                          <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📄</span>Web Catalogue Link to Customers</div></div>
+                          <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📄</span>Web Item Restrictions</div></div>
+                          <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📄</span>Web Complex Masks</div></div>
+                          <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📄</span>Web Customer Rules Admin</div></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="pronto-main">
+          <div class="item-sec-dialog">
+            <div class="item-sec-titlebar">
+              <div class="ttl">🪟 Maintain Item Security</div>
+              <div class="win-btn-sm">_</div>
+              <div class="win-btn-sm">▢</div>
+              <div class="win-btn-sm">✕</div>
+            </div>
+            <div class="item-sec-tabs">
+              <div class="tab">Standard</div>
+            </div>
+            <div class="item-sec-grid">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Catalogue</th>
+                    <th>Category (Product)</th>
+                    <th>Style</th>
+                    <th>Colour</th>
+                    <th>Include/Exclude</th>
+                    <th>Date Changed</th>
+                    <th>Time Changed</th>
+                  </tr>
+                </thead>
+                <tbody id="s7-tbody">
+                  <tr class="highlight"><td>ACCEPERT</td><td>C_20129</td><td>512758___</td><td>BLCK</td><td>I</td><td>29-MAY-2025</td><td>15:30:59</td></tr>
+                  <tr><td>1SEYMOUR</td><td>C_19804</td><td>K14030___</td><td>NAVY</td><td>I</td><td>10-APR-2025</td><td>15:03:54</td></tr>
+                  <tr><td>1SEYMOUR</td><td>C_19804</td><td>K14031___</td><td>NAVY</td><td>I</td><td>10-APR-2025</td><td>15:03:59</td></tr>
+                  <tr><td>1SEYMOUR</td><td>C_19804</td><td>Y07950___</td><td>YENY</td><td>I</td><td>10-APR-2025</td><td>15:03:46</td></tr>
+                  <tr><td>1SEYMOUR</td><td>C_19805</td><td>E1101____</td><td>NAVY</td><td>I</td><td>10-APR-2025</td><td>15:04:05</td></tr>
+                  <tr><td>1SEYMOUR</td><td>C_19806</td><td>332152___</td><td>BLCK</td><td>I</td><td>10-APR-2025</td><td>15:04:18</td></tr>
+                  <tr><td>3DEAKALG</td><td>C_8063</td><td>A2170T___</td><td>NAVY</td><td>I</td><td>28-MAR-2025</td><td>16:33:08</td></tr>
+                  <tr><td>3DEAKALG</td><td>C_8063</td><td>A2370ST__</td><td>ORNY</td><td>I</td><td>28-MAR-2025</td><td>16:33:08</td></tr>
+                  <tr><td>3DEAKALG</td><td>C_8063</td><td>BS6696T__</td><td>ORNY</td><td>I</td><td>24-AUG-2022</td><td>23:09:37</td></tr>
+                  <tr><td>3DEAKALG</td><td>C_8063</td><td>E1100T___</td><td>NAVY</td><td>I</td><td>24-AUG-2022</td><td>23:06:57</td></tr>
+                  <tr><td>3DEAKALG</td><td>C_8063</td><td>E1310ST__</td><td>ORNY</td><td>I</td><td>02-AUG-2023</td><td>11:01:10</td></tr>
+                  <tr><td>3DEAKALG</td><td>C_8063</td><td>E1310ST__</td><td>YENY</td><td>I</td><td>02-AUG-2023</td><td>11:00:56</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="item-sec-status"></div>
+            <div class="item-sec-actions">
+              <a class="primary" id="s7-find"><u>F</u>ind</a>
+              <a id="s7-entry"><u>E</u>ntry</a>
+              <a id="s7-remove"><u>R</u>emove</a>
+              <a id="s7-correct"><u>C</u>orrect</a>
+            </div>
+
+            <!-- Entry dialog -->
+            <div class="entry-dialog" id="s7-entry-dialog">
+              <div class="ed-title">Item Security Entry</div>
+              <div class="ed-body">
+                <div class="ed-row"><div class="ed-label">Catalogue:</div><input class="ed-input" id="s7-ed-cat"></div>
+                <div class="ed-row"><div class="ed-label">Category (Product):</div><input class="ed-input" id="s7-ed-prod"></div>
+                <div class="ed-row"><div class="ed-label">Style:</div><input class="ed-input" id="s7-ed-style"></div>
+                <div class="ed-row"><div class="ed-label">Colour:</div><input class="ed-input" id="s7-ed-colour"></div>
+                <div class="ed-row"><div class="ed-label">Include/Exclude:</div><input class="ed-input" id="s7-ed-incl" value="I" readonly style="background: #f5f5f5;"></div>
+              </div>
+              <div class="ed-footer">
+                <button class="ed-btn" id="s7-ed-ok">OK</button>
+                <button class="ed-btn">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cursor" id="cursor7"></div>
+    <div class="caption-strip">
+      <div class="caption-step" id="s7-step">STEP 7 — Pronto Entry</div>
+      <div class="caption-text" id="s7-caption">In <strong>Maintain Item Security</strong>, use the <strong>Entry</strong> action to add product-line records for the new catalogue. Each line ties a <em>Catalogue</em> (e.g. AcidgreenWoven) to a <em>Category</em> code (e.g. C_22742) with the relevant <em>Style</em> and <em>Colour</em>.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SCENE 8: Overnight sync back -->
+  <!-- ============================================================ -->
+  <div class="scene" data-scene="8">
+    <div class="scene-title"><strong>SCENE 9</strong> &nbsp;·&nbsp; Overnight Sync → Commerce Vision</div>
+    <div class="transition-stage">
+      <div class="trans-row">
+        <div class="trans-panel pronto">
+          <div class="tp-header">Pronto Xi</div>
+          <div class="tp-icon">📋</div>
+          <div class="tp-title">Item Security</div>
+          <div class="tp-sub">AcidgreenWoven lines<br>entered and saved</div>
+        </div>
+        <div class="trans-flow-arrow"></div>
+        <div class="trans-panel sync">
+          <div class="tp-header">Overnight Sync</div>
+          <div class="tp-icon">🌙</div>
+          <div class="tp-title">Reconciliation</div>
+          <div class="tp-sub">Pronto → Commerce<br>Vision data sync<br>(runs nightly)</div>
+        </div>
+        <div class="trans-flow-arrow"></div>
+        <div class="trans-panel cv">
+          <div class="tp-header">Commerce Vision</div>
+          <div class="tp-icon">🛒</div>
+          <div class="tp-title">Catalogue Live</div>
+          <div class="tp-sub">Categories &amp; products<br>now visible to<br>customers</div>
+        </div>
+      </div>
+      <div class="moon-icon" id="s8-moon" style="left: 50%; top: 30%; transform: translateX(-50%);">🌙</div>
+      <div class="csv-packet" id="s8-packet1" style="opacity: 0;">Catalogue: AcidgreenWoven</div>
+      <div class="csv-packet" id="s8-packet2" style="opacity: 0;">Categories: 4 · Products: 4</div>
+    </div>
+    <div class="caption-strip">
+      <div class="caption-step" id="s8-step">TRANSITION</div>
+      <div class="caption-text" id="s8-caption">An <strong>overnight batch sync</strong> reconciles the Pronto Xi item-security data back to Commerce Vision. By the next morning the catalogue, its categories, and assigned products are live on the storefront for end users.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SCENE 9: RSEA Customer Storefront -->
+  <!-- ============================================================ -->
+  <div class="scene" data-scene="9">
+    <div class="scene-title"><strong>SCENE 10</strong> &nbsp;·&nbsp; Customer View — RSEA Storefront</div>
+    <div class="store-window">
+      <div class="store-browser-bar">
+        <span class="dots"><span></span><span></span><span></span></span>
+        <div class="url">🔒 rseastage.commerce.vision/home</div>
+      </div>
+      <div class="store-header">
+        <div class="store-logo">RSEA<small>SAFETY</small></div>
+        <div class="nav-link">Contact Us</div>
+        <div class="nav-link">Help ▾</div>
+        <div class="acct-pill">KONE ELEVATORS AUSTRALIA (KONEALEX)</div>
+        <div class="cat-pill">📂 Catalogue ▾</div>
+        <div class="cat-pill-y">KONE Elevators Australia</div>
+        <div class="right">
+          <div class="search-box">Product Search 🔍</div>
+          <span>👤 My Account ▾</span>
+          <span>⎋ Logout</span>
+          <span class="store-cart-pill">🛒 $0.00 (0 items)</span>
+        </div>
+      </div>
+      <div class="store-catalogue-bar">MY CATALOGUE</div>
+      <div class="store-body">
+        <div class="store-sidebar">
+          <div class="store-cat" id="s9-cat-acidgreen">
+            Acidgreen
+            <span class="chev" id="s9-chev-acidgreen">▸</span>
+          </div>
+          <div class="store-subcats" id="s9-subs-acidgreen">
+            <div class="store-subcat" id="s9-sub-adobe">Adobe Commerce</div>
+            <div class="store-subcat">Shopify</div>
+          </div>
+          <div class="store-cat" id="s9-cat-woven">
+            Woven
+            <span class="chev">▸</span>
+          </div>
+        </div>
+        <div class="store-content" id="s9-content">
+          <!-- Dashboard initially -->
+          <div id="s9-dashboard">
+            <h1>📋 My Dashboard</h1>
+            <div class="sub">User, Order &amp; Account Management</div>
+            <div style="font-size: 12px; color: #444; margin-bottom: 20px;">KONE ELEVATORS AUSTRALIA (KONEALEX)</div>
+            <div class="store-tiles">
+              <div class="store-tile">
+                <div class="tile-icon">⚙</div>
+                <div class="tile-title">Site Preferences</div>
+                <div class="tile-sub">Update your personal site preferences</div>
+              </div>
+              <div class="store-tile">
+                <div class="tile-icon">🚚</div>
+                <div class="tile-title">Order History</div>
+                <div class="tile-sub">Review the status of your order</div>
+              </div>
+              <div class="store-tile">
+                <div class="tile-icon">⏸</div>
+                <div class="tile-title">Draft Orders</div>
+                <div class="tile-sub">Orders not submitted still in draft</div>
+              </div>
+              <div class="store-tile">
+                <div class="tile-icon">⭐</div>
+                <div class="tile-title">My Favourites</div>
+                <div class="tile-sub">List of your favourite products</div>
+              </div>
+            </div>
+          </div>
+          <!-- Product list view -->
+          <div id="s9-products" style="display: none;">
+            <div class="store-products-bc">🏠 &gt; <span>Acidgreen</span> &gt; <span class="crumb-cur">Adobe Commerce</span></div>
+            <div class="store-products-title">Adobe Commerce</div>
+            <div class="store-products-sortbar">
+              <span>Sort:</span>
+              <span class="sort-input">Please Select... ▾</span>
+              <span style="margin-left: auto;">Showing 1 - 1 of 1</span>
+              <span>Per page</span>
+              <span class="sort-input">48 ▾</span>
+            </div>
+            <div class="store-product-row" id="s9-prod-1">
+              <div class="store-product-img">
+                <!-- Belt icon (work belt with buckle) -->
+                <svg class="product-icon-svg" viewBox="0 0 80 80">
+                  <rect x="6" y="34" width="68" height="12" rx="1" fill="#3a3a3a"/>
+                  <rect x="6" y="34" width="68" height="2" fill="#5a5a5a"/>
+                  <rect x="6" y="44" width="68" height="2" fill="#1a1a1a"/>
+                  <rect x="32" y="30" width="16" height="20" fill="#888" stroke="#333" stroke-width="1"/>
+                  <rect x="36" y="34" width="8" height="12" fill="#444"/>
+                  <line x1="40" y1="34" x2="40" y2="46" stroke="#aaa" stroke-width="1"/>
+                </svg>
+              </div>
+              <div class="store-product-info">
+                <div class="star">☆</div>
+                <div class="sku">E3910STZ</div>
+                <div class="name">ELEVEN Workwear Stretch Belt with Plastic Buckle</div>
+              </div>
+              <div class="store-product-selects">
+                <div class="store-select">Select Colour <span>▾</span></div>
+                <div class="store-select">Select Size <span>▾</span></div>
+              </div>
+              <div class="store-product-qty">
+                <button>−</button><input value="0"><button>+</button>
+              </div>
+              <div>
+                <div class="store-product-price">$28.50</div>
+                <button class="store-addcart">🛒 Add to Cart</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cursor" id="cursor9"></div>
+    <div class="caption-strip">
+      <div class="caption-step" id="s9-step">STEP 10 — Customer View</div>
+      <div class="caption-text" id="s9-caption">After the sync, customers logging into the RSEA storefront see the new catalogue structure in the left navigation. Expanding <strong>Acidgreen</strong> reveals its child categories; clicking <strong>Adobe Commerce</strong> shows the product assigned earlier in the workflow — the same SKU (<em>E3910</em>) the operator added in Scene 4.</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// Scene controller
+// ============================================================
+const sceneLabels = [
+  'Scene 1 / 10 — Navigate to Catalogue Maintenance',
+  'Scene 2 / 10 — Create New Catalogue',
+  'Scene 3 / 10 — Build Category Hierarchy',
+  'Scene 4 / 10 — Assign Products',
+  'Scene 5 / 10 — Save & Export',
+  'Scene 6 / 10 — Hand-off to Pronto Xi',
+  'Scene 7 / 10 — Pronto: Navigate to Web Catalogue',
+  'Scene 8 / 10 — Pronto: Maintain Item Security',
+  'Scene 9 / 10 — Overnight Sync',
+  'Scene 10 / 10 — Customer Storefront View'
+];
+
+let currentScene = 0;
+let isPlaying = false;
+let activeTimeouts = [];
+
+const scenes = document.querySelectorAll('.scene');
+const dots = document.querySelectorAll('.scene-dot');
+const sceneLabel = document.getElementById('sceneLabel');
+
+function clearTimers() {
+  activeTimeouts.forEach(t => clearTimeout(t));
+  activeTimeouts = [];
+}
+function delay(ms) {
+  return new Promise(r => activeTimeouts.push(setTimeout(r, ms)));
+}
+
+function setScene(n) {
+  clearTimers();
+  isPlaying = false;
+  currentScene = n;
+  scenes.forEach((s, i) => s.classList.toggle('active', i === n));
+  dots.forEach((d, i) => {
+    d.classList.toggle('active', i === n);
+    d.classList.toggle('complete', i < n);
+  });
+  sceneLabel.textContent = sceneLabels[n];
+  resetScene(n);
+}
+
+function resetScene(n) {
+  if (n === 0) {
+    document.getElementById('s0-submenu').classList.remove('show');
+    document.getElementById('s0-submenu').style.top = '';
+    document.getElementById('s0-products-cats').classList.remove('highlight');
+    document.getElementById('s0-cat-maint').classList.remove('highlight');
+    moveCursor('cursor0', 50, 50, false);
+  } else if (n === 1) {
+    document.getElementById('s1-modal').classList.remove('show');
+    document.getElementById('s1-code').value = '';
+    document.getElementById('s1-desc').value = '';
+    moveCursor('cursor1', 50, 50, false);
+  } else if (n === 2) {
+    // Reset tree visibility
+    const tree = document.getElementById('s2-tree');
+    tree.querySelectorAll('.tree-node').forEach(n => n.classList.remove('show'));
+    moveCursor('cursor2', 50, 50, false);
+    document.getElementById('s2-code').textContent = '';
+    document.getElementById('s2-desc').textContent = '';
+    document.getElementById('s2-parent').textContent = '';
+  } else if (n === 3) {
+    ['s3-sel-1','s3-sel-2','s3-sel-3','s3-sel-4'].forEach(id => document.getElementById(id).classList.remove('show'));
+    document.getElementById('s3-search').value = '';
+    document.getElementById('s3-results').style.display = 'none';
+    document.querySelectorAll('#s3-tree .tree-node.leaf').forEach(n => n.classList.remove('selected'));
+    document.getElementById('s3-currentcat').textContent = '—';
+    moveCursor('cursor3', 50, 50, false);
+  } else if (n === 4) {
+    document.getElementById('s4-csv').style.opacity = '0';
+    const codeEl = document.getElementById('s4-code');
+    codeEl.style.background = '';
+    codeEl.style.color = '';
+    codeEl.style.transform = '';
+    moveCursor('cursor4', 50, 50, false);
+  } else if (n === 5) {
+    // Transition scene - reset CSV packet
+    const packet = document.getElementById('s5-packet');
+    packet.style.opacity = '0';
+    packet.style.left = '';
+    packet.style.top = '';
+    packet.style.transition = '';
+  } else if (n === 6) {
+    // Pronto navigation - collapse tree nodes
+    document.getElementById('s6-inventory').classList.remove('expanded');
+    document.getElementById('s6-webcss').classList.remove('expanded');
+    document.getElementById('s6-inventory').classList.remove('highlight');
+    document.getElementById('s6-webcss').classList.remove('highlight');
+    document.getElementById('s6-webcat').classList.remove('highlight');
+    moveCursor('cursor6', 50, 50, false);
+  } else if (n === 7) {
+    // Pronto entry - reset rows added, clear dialog
+    document.querySelectorAll('#s7-tbody tr.new-row').forEach(r => r.remove());
+    // Restore highlight on the first (original) row
+    const tbody = document.getElementById('s7-tbody');
+    if (tbody.firstElementChild) {
+      tbody.querySelectorAll('tr').forEach(r => r.classList.remove('highlight'));
+      tbody.firstElementChild.classList.add('highlight');
+    }
+    const dialog = document.getElementById('s7-entry-dialog');
+    dialog.classList.remove('show');
+    ['s7-ed-cat','s7-ed-prod','s7-ed-style','s7-ed-colour'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    moveCursor('cursor7', 50, 50, false);
+  } else if (n === 8) {
+    // Overnight sync
+    document.getElementById('s8-moon').classList.remove('show');
+    document.getElementById('s8-packet1').style.opacity = '0';
+    document.getElementById('s8-packet2').style.opacity = '0';
+  } else if (n === 9) {
+    // Storefront - close subcats, show dashboard
+    document.getElementById('s9-cat-acidgreen').classList.remove('expanded', 'active');
+    document.getElementById('s9-cat-woven').classList.remove('expanded', 'active');
+    document.getElementById('s9-sub-adobe').classList.remove('active');
+    document.getElementById('s9-chev-acidgreen').textContent = '▸';
+    document.getElementById('s9-dashboard').style.display = 'block';
+    document.getElementById('s9-products').style.display = 'none';
+    document.getElementById('s9-prod-1').classList.remove('show');
+    moveCursor('cursor9', 50, 50, false);
+  }
+}
+
+function moveCursor(id, x, y, visible = true) {
+  const c = document.getElementById(id);
+  if (!c) return;
+  c.style.left = x + '%';
+  c.style.top = y + '%';
+  if (visible) c.classList.add('visible'); else c.classList.remove('visible');
+}
+
+// Move cursor to the center of a DOM element (passed as selector or element).
+// Computes the position relative to the stage so it works regardless of layout.
+function moveCursorToEl(cursorId, target, opts = {}) {
+  const c = document.getElementById(cursorId);
+  const stage = document.getElementById('stage');
+  if (!c || !stage) return;
+  const el = typeof target === 'string' ? document.querySelector(target) : target;
+  if (!el) {
+    console.warn('moveCursorToEl: target not found', target);
+    return;
+  }
+  const stageRect = stage.getBoundingClientRect();
+  const elRect = el.getBoundingClientRect();
+  // Default to centre of element; allow offset for nudging
+  const offsetX = opts.offsetX || 0;
+  const offsetY = opts.offsetY || 0;
+  const x = ((elRect.left + elRect.width / 2 + offsetX) - stageRect.left) / stageRect.width * 100;
+  const y = ((elRect.top + elRect.height / 2 + offsetY) - stageRect.top) / stageRect.height * 100;
+  c.style.left = x + '%';
+  c.style.top = y + '%';
+  c.classList.add('visible');
+}
+
+function clickCursor(id) {
+  const c = document.getElementById(id);
+  if (!c) return;
+  c.classList.add('click');
+  setTimeout(() => c.classList.remove('click'), 400);
+}
+
+async function typeInto(el, text, charDelay = 60) {
+  el.value = '';
+  el.classList.add('typing');
+  for (let i = 0; i < text.length; i++) {
+    el.value = text.substring(0, i + 1);
+    await delay(charDelay);
+  }
+  el.classList.remove('typing');
+}
+
+// ============================================================
+// Scene animation scripts
+// ============================================================
+async function playScene0() {
+  isPlaying = true;
+  resetScene(0);
+  await delay(400);
+  // Move to Products & Categories menu item
+  moveCursorToEl('cursor0', '#s0-products-cats');
+  await delay(900);
+  document.getElementById('s0-products-cats').classList.add('highlight');
+  clickCursor('cursor0');
+  await delay(400);
+  // Position submenu next to the menu item we just clicked
+  const submenu = document.getElementById('s0-submenu');
+  const triggerEl = document.getElementById('s0-products-cats');
+  const browserBody = triggerEl.closest('.browser-body');
+  const triggerRect = triggerEl.getBoundingClientRect();
+  const bodyRect = browserBody.getBoundingClientRect();
+  submenu.style.top = (triggerRect.top - bodyRect.top) + 'px';
+  submenu.classList.add('show');
+  await delay(900);
+  // Move to Catalogue Maintenance submenu item
+  moveCursorToEl('cursor0', '#s0-cat-maint');
+  await delay(900);
+  document.getElementById('s0-cat-maint').classList.add('highlight');
+  clickCursor('cursor0');
+  await delay(800);
+  document.getElementById('s0-step').textContent = 'STEP 1 ✓ COMPLETE';
+  isPlaying = false;
+}
+
+async function playScene1() {
+  isPlaying = true;
+  resetScene(1);
+  await delay(400);
+  // Click "New" link
+  moveCursorToEl('cursor1', '#s1-new');
+  await delay(900);
+  clickCursor('cursor1');
+  await delay(400);
+  document.getElementById('s1-modal').classList.add('show');
+  await delay(600);
+  // Click into Code field
+  moveCursorToEl('cursor1', '#s1-code');
+  await delay(500);
+  clickCursor('cursor1');
+  await typeInto(document.getElementById('s1-code'), 'AcidgreenWoven', 50);
+  await delay(300);
+  // Click into Description field
+  moveCursorToEl('cursor1', '#s1-desc');
+  await delay(300);
+  clickCursor('cursor1');
+  await typeInto(document.getElementById('s1-desc'), 'Test Catalg', 60);
+  await delay(400);
+  // Click OK button
+  moveCursorToEl('cursor1', '#s1-ok');
+  await delay(500);
+  clickCursor('cursor1');
+  await delay(500);
+  document.getElementById('s1-step').textContent = 'STEP 2 ✓ COMPLETE';
+  isPlaying = false;
+}
+
+async function playScene2() {
+  isPlaying = true;
+  resetScene(2);
+  const nodes = document.querySelectorAll('#s2-tree .tree-node');
+  const fields = [
+    { code: 'C_TEMPID_1', desc: 'Acidgreen', parent: 'None' },
+    { code: 'C_TEMPID_3', desc: 'Adobe Commerce', parent: 'C_TEMPID_1' },
+    { code: 'C_TEMPID_4', desc: 'Shopify', parent: 'C_TEMPID_1' },
+    { code: 'C_TEMPID_2', desc: 'Woven', parent: 'None' },
+    { code: 'C_TEMPID_5', desc: 'Pronto Xi Sync', parent: 'C_TEMPID_2' },
+    { code: 'C_TEMPID_6', desc: 'Avenue', parent: 'C_TEMPID_2' }
+  ];
+
+  await delay(400);
+
+  for (let i = 0; i < nodes.length; i++) {
+    nodes[i].classList.add('show');
+    // Move cursor onto each node as it appears
+    await delay(50);
+    moveCursorToEl('cursor2', nodes[i].querySelector('.tree-label'));
+    document.getElementById('s2-code').textContent = fields[i].code;
+    document.getElementById('s2-desc').textContent = fields[i].desc;
+    document.getElementById('s2-parent').textContent = fields[i].parent;
+    await delay(700);
+  }
+  document.getElementById('s2-step').textContent = 'STEP 3 ✓ COMPLETE';
+  isPlaying = false;
+}
+
+async function playScene3() {
+  isPlaying = true;
+  resetScene(3);
+  const skus = [
+    { sku: 'E3910____', name: 'ELEVEN Workwear Stretch Belt with Plastic Buckle', cat: 'Adobe Commerce', id: 's3-sel-1', catEl: '#s3-cat-adobe' },
+    { sku: '10100____', name: "Biz Collection Women's Cool Stretch Maternity Pant", cat: 'Shopify', id: 's3-sel-2', catEl: '#s3-cat-shopify' },
+    { sku: 'E1100____', name: 'ELEVEN Workwear Evolution Cotton Drill Work Pant', cat: 'Pronto Xi Sync', id: 's3-sel-3', catEl: '#s3-cat-pronto' },
+    { sku: 'E1170____', name: 'ELEVEN Workwear AEROCOOL Cotton Ripstop Work Pant', cat: 'Avenue', id: 's3-sel-4', catEl: '#s3-cat-avenue' }
+  ];
+
+  await delay(400);
+  const searchInput = document.getElementById('s3-search');
+  const resultBox = document.getElementById('s3-results');
+  const resultName = document.getElementById('s3-result-name');
+
+  for (let i = 0; i < skus.length; i++) {
+    // Clear previous category's products from the visible list
+    ['s3-sel-1','s3-sel-2','s3-sel-3','s3-sel-4'].forEach(id => document.getElementById(id).classList.remove('show'));
+
+    // Click the category in the tree first
+    moveCursorToEl('cursor3', skus[i].catEl);
+    await delay(500);
+    clickCursor('cursor3');
+    // Highlight selected category
+    document.querySelectorAll('#s3-tree .tree-node.leaf').forEach(n => n.classList.remove('selected'));
+    document.querySelector(skus[i].catEl).classList.add('selected');
+    document.getElementById('s3-currentcat').textContent = skus[i].cat;
+    await delay(400);
+
+    // Move to search field and type
+    moveCursorToEl('cursor3', '#s3-search');
+    await delay(400);
+    clickCursor('cursor3');
+    await typeInto(searchInput, skus[i].sku, 40);
+
+    // Click search button
+    moveCursorToEl('cursor3', '#s3-search-btn');
+    await delay(300);
+    clickCursor('cursor3');
+    await delay(300);
+    resultName.innerHTML = '<span>' + skus[i].name + '</span><span style="color: #888;">' + skus[i].sku + '</span>';
+    resultBox.style.display = 'block';
+    await delay(500);
+
+    // Click on the search result
+    moveCursorToEl('cursor3', '#s3-result-name');
+    await delay(400);
+    clickCursor('cursor3');
+    await delay(200);
+
+    // Click Add
+    moveCursorToEl('cursor3', '#s3-add-btn');
+    await delay(400);
+    clickCursor('cursor3');
+    await delay(300);
+    document.getElementById(skus[i].id).classList.add('show');
+    resultBox.style.display = 'none';
+    searchInput.value = '';
+    await delay(800);
+  }
+  document.getElementById('s3-step').textContent = 'STEP 4 ✓ COMPLETE';
+  isPlaying = false;
+}
+
+async function playScene4() {
+  isPlaying = true;
+  resetScene(4);
+  await delay(400);
+  // Click Save button
+  moveCursorToEl('cursor4', '#s4-save');
+  await delay(700);
+  clickCursor('cursor4');
+  await delay(500);
+  // Highlight code field
+  const codeEl = document.getElementById('s4-code');
+  moveCursorToEl('cursor4', '#s4-code');
+  await delay(700);
+  codeEl.style.transition = 'all 0.5s';
+  codeEl.style.background = '#fed7aa';
+  codeEl.style.color = '#9a3412';
+  codeEl.style.transform = 'scale(1.15)';
+  await delay(900);
+  codeEl.style.transform = 'scale(1)';
+  await delay(400);
+  // Click Export button
+  moveCursorToEl('cursor4', '#s4-export');
+  await delay(700);
+  clickCursor('cursor4');
+  await delay(400);
+  document.getElementById('s4-csv').style.opacity = '1';
+  await delay(500);
+  document.getElementById('s4-step').textContent = 'STEP 5 ✓ COMPLETE';
+  isPlaying = false;
+}
+
+async function playScene5() {
+  // Transition: CSV packet flies from CV panel to Pronto panel
+  isPlaying = true;
+  resetScene(5);
+  await delay(400);
+
+  const packet = document.getElementById('s5-packet');
+  const cvPanel = document.getElementById('s5-cv');
+  const prontoPanel = document.getElementById('s5-pronto');
+  const stage = document.getElementById('stage');
+  const stageRect = stage.getBoundingClientRect();
+  const cvRect = cvPanel.getBoundingClientRect();
+  const prontoRect = prontoPanel.getBoundingClientRect();
+
+  // Position packet starting at CV panel centre
+  const startX = (cvRect.left + cvRect.width / 2 - stageRect.left);
+  const startY = (cvRect.top + cvRect.height / 2 - stageRect.top);
+  const endX = (prontoRect.left + prontoRect.width / 2 - stageRect.left);
+  const endY = (prontoRect.top + prontoRect.height / 2 - stageRect.top);
+
+  packet.style.transition = 'none';
+  packet.style.left = startX + 'px';
+  packet.style.top = startY + 'px';
+  packet.style.transform = 'translate(-50%, -50%)';
+  await delay(50);
+  packet.style.transition = 'opacity 0.4s';
+  packet.style.opacity = '1';
+  await delay(500);
+  packet.style.transition = 'left 1.6s cubic-bezier(0.4, 0, 0.2, 1), top 1.6s cubic-bezier(0.4, 0, 0.2, 1)';
+  packet.style.left = endX + 'px';
+  packet.style.top = endY + 'px';
+  await delay(1700);
+  packet.style.transition = 'opacity 0.5s';
+  packet.style.opacity = '0';
+  await delay(400);
+  isPlaying = false;
+}
+
+async function playScene6() {
+  // Pronto: expand Inventory → Web CSS Menu → click Web Catalogue
+  isPlaying = true;
+  resetScene(6);
+  await delay(500);
+
+  // Expand Inventory
+  moveCursorToEl('cursor6', '#s6-inventory > .p-label');
+  await delay(900);
+  clickCursor('cursor6');
+  document.getElementById('s6-inventory').classList.add('expanded');
+  document.getElementById('s6-inventory').classList.add('highlight');
+  await delay(800);
+  document.getElementById('s6-inventory').classList.remove('highlight');
+
+  // Expand Web CSS Menu
+  moveCursorToEl('cursor6', '#s6-webcss > .p-label');
+  await delay(800);
+  clickCursor('cursor6');
+  document.getElementById('s6-webcss').classList.add('expanded');
+  document.getElementById('s6-webcss').classList.add('highlight');
+  await delay(800);
+  document.getElementById('s6-webcss').classList.remove('highlight');
+
+  // Click Web Catalogue
+  moveCursorToEl('cursor6', '#s6-webcat > .p-label');
+  await delay(800);
+  clickCursor('cursor6');
+  document.getElementById('s6-webcat').classList.add('highlight');
+  await delay(900);
+  document.getElementById('s6-step').textContent = 'STEP 6 ✓ COMPLETE';
+  isPlaying = false;
+}
+
+async function playScene7() {
+  // Pronto Item Security: click Entry, fill in dialog, submit, repeat for 2-3 rows
+  isPlaying = true;
+  resetScene(7);
+  await delay(500);
+
+  const entries = [
+    { cat: 'AcidgreenWoven', prod: 'C_TEMPID_3', style: 'E3910____', colour: 'BLCK', desc: 'Adobe Commerce' },
+    { cat: 'AcidgreenWoven', prod: 'C_TEMPID_5', style: 'E1100____', colour: 'NAVY', desc: 'Pronto Xi Sync' },
+    { cat: 'AcidgreenWoven', prod: 'C_TEMPID_6', style: 'E1170____', colour: 'ORNY', desc: 'Avenue' }
+  ];
+
+  const tbody = document.getElementById('s7-tbody');
+  const dialog = document.getElementById('s7-entry-dialog');
+
+  for (let i = 0; i < entries.length; i++) {
+    const e = entries[i];
+
+    // Click Entry button
+    moveCursorToEl('cursor7', '#s7-entry');
+    await delay(700);
+    clickCursor('cursor7');
+    await delay(300);
+    dialog.classList.add('show');
+    await delay(500);
+
+    // Fill in Catalogue
+    moveCursorToEl('cursor7', '#s7-ed-cat');
+    await delay(400);
+    clickCursor('cursor7');
+    await typeInto(document.getElementById('s7-ed-cat'), e.cat, 35);
+
+    // Fill in Category
+    moveCursorToEl('cursor7', '#s7-ed-prod');
+    await delay(200);
+    clickCursor('cursor7');
+    await typeInto(document.getElementById('s7-ed-prod'), e.prod, 40);
+
+    // Fill in Style
+    moveCursorToEl('cursor7', '#s7-ed-style');
+    await delay(200);
+    clickCursor('cursor7');
+    await typeInto(document.getElementById('s7-ed-style'), e.style, 40);
+
+    // Fill in Colour
+    moveCursorToEl('cursor7', '#s7-ed-colour');
+    await delay(200);
+    clickCursor('cursor7');
+    await typeInto(document.getElementById('s7-ed-colour'), e.colour, 60);
+
+    // Click OK
+    await delay(300);
+    moveCursorToEl('cursor7', '#s7-ed-ok');
+    await delay(400);
+    clickCursor('cursor7');
+    await delay(300);
+    dialog.classList.remove('show');
+
+    // Insert new row at top of grid (after removing highlight from existing top row)
+    document.querySelectorAll('#s7-tbody tr.highlight').forEach(r => r.classList.remove('highlight'));
+    const now = new Date();
+    const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    const dateStr = String(now.getDate()).padStart(2,'0') + '-' + months[now.getMonth()] + '-' + now.getFullYear();
+    const timeStr = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
+    const newRow = document.createElement('tr');
+    newRow.className = 'new-row';
+    newRow.innerHTML = `<td>${e.cat}</td><td>${e.prod}</td><td>${e.style}</td><td>${e.colour}</td><td>I</td><td>${dateStr}</td><td>${timeStr}</td>`;
+    tbody.insertBefore(newRow, tbody.firstChild);
+
+    // Clear inputs for next iteration
+    ['s7-ed-cat','s7-ed-prod','s7-ed-style','s7-ed-colour'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+
+    await delay(800);
+  }
+  document.getElementById('s7-step').textContent = 'STEP 7 ✓ COMPLETE';
+  isPlaying = false;
+}
+
+async function playScene8() {
+  // Overnight sync: moon appears, packets fly Pronto → Sync → CV
+  isPlaying = true;
+  resetScene(8);
+  await delay(500);
+
+  const moon = document.getElementById('s8-moon');
+  const packet1 = document.getElementById('s8-packet1');
+  const packet2 = document.getElementById('s8-packet2');
+
+  // Find panels
+  const stage = document.getElementById('stage');
+  const scene = scenes[8];
+  const panels = scene.querySelectorAll('.trans-panel');
+  const prontoPanel = panels[0];
+  const cvPanel = panels[2];
+  const stageRect = stage.getBoundingClientRect();
+  const prontoRect = prontoPanel.getBoundingClientRect();
+  const cvRect = cvPanel.getBoundingClientRect();
+
+  const startX = (prontoRect.left + prontoRect.width / 2 - stageRect.left);
+  const startY = (prontoRect.top + prontoRect.height / 2 - stageRect.top);
+  const endX = (cvRect.left + cvRect.width / 2 - stageRect.left);
+  const endY = (cvRect.top + cvRect.height / 2 - stageRect.top);
+
+  // Moon glow
+  await delay(300);
+  moon.classList.add('show');
+  await delay(800);
+
+  // Packet 1 fly
+  packet1.style.transition = 'none';
+  packet1.style.left = startX + 'px';
+  packet1.style.top = startY + 'px';
+  packet1.style.transform = 'translate(-50%, -50%)';
+  await delay(50);
+  packet1.style.transition = 'opacity 0.4s';
+  packet1.style.opacity = '1';
+  await delay(400);
+  packet1.style.transition = 'left 2s cubic-bezier(0.4, 0, 0.2, 1), top 2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s';
+  packet1.style.left = endX + 'px';
+  packet1.style.top = endY + 'px';
+
+  // Packet 2 — delayed
+  await delay(700);
+  packet2.style.transition = 'none';
+  packet2.style.left = startX + 'px';
+  packet2.style.top = (startY + 30) + 'px';
+  packet2.style.transform = 'translate(-50%, -50%)';
+  await delay(50);
+  packet2.style.transition = 'opacity 0.4s';
+  packet2.style.opacity = '1';
+  await delay(400);
+  packet2.style.transition = 'left 2s cubic-bezier(0.4, 0, 0.2, 1), top 2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s';
+  packet2.style.left = endX + 'px';
+  packet2.style.top = (endY + 30) + 'px';
+
+  await delay(1800);
+  packet1.style.opacity = '0';
+  packet2.style.opacity = '0';
+  await delay(400);
+  isPlaying = false;
+}
+
+async function playScene9() {
+  // Customer storefront: click Acidgreen → expand → click Adobe Commerce → product loads
+  isPlaying = true;
+  resetScene(9);
+  await delay(500);
+
+  // Click Acidgreen
+  moveCursorToEl('cursor9', '#s9-cat-acidgreen');
+  await delay(900);
+  clickCursor('cursor9');
+  document.getElementById('s9-cat-acidgreen').classList.add('expanded', 'active');
+  document.getElementById('s9-chev-acidgreen').textContent = '▾';
+  await delay(700);
+
+  // Click Adobe Commerce
+  moveCursorToEl('cursor9', '#s9-sub-adobe');
+  await delay(900);
+  clickCursor('cursor9');
+  document.getElementById('s9-sub-adobe').classList.add('active');
+  await delay(400);
+
+  // Swap dashboard for product list
+  document.getElementById('s9-dashboard').style.display = 'none';
+  document.getElementById('s9-products').style.display = 'block';
+  await delay(400);
+
+  // Product fades in
+  document.getElementById('s9-prod-1').classList.add('show');
+  await delay(1000);
+
+  document.getElementById('s9-step').textContent = 'STEP 10 ✓ COMPLETE';
+  isPlaying = false;
+}
+
+const playFunctions = [playScene0, playScene1, playScene2, playScene3, playScene4, playScene5, playScene6, playScene7, playScene8, playScene9];
+
+// ============================================================
+// Wire controls
+// ============================================================
+document.getElementById('playBtn').addEventListener('click', () => {
+  if (isPlaying) return;
+  playFunctions[currentScene]();
+});
+
+document.getElementById('nextBtn').addEventListener('click', () => {
+  if (currentScene < scenes.length - 1) setScene(currentScene + 1);
+});
+document.getElementById('prevBtn').addEventListener('click', () => {
+  if (currentScene > 0) setScene(currentScene - 1);
+});
+document.getElementById('restartBtn').addEventListener('click', () => {
+  setScene(0);
+});
+dots.forEach((d, i) => d.addEventListener('click', () => setScene(i)));
+
+// Auto-play first scene on load
+setTimeout(() => playFunctions[0](), 600);
+</script>
+
+</body>
+</html>

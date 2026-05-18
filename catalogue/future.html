@@ -1,0 +1,3102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Future-State Catalogue Workflow — Pronto Xi → Adobe Commerce → Customer</title>
+<style>
+  /* ---------- Global ---------- */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; font-family: 'Segoe UI', Tahoma, sans-serif; background: #1a1d24; color: #e8e8e8; overflow: hidden; }
+  body { display: flex; flex-direction: column; }
+
+  /* ---------- Top bar (controls) ---------- */
+  .controls {
+    background: #0e1015; padding: 10px 20px; display: flex; align-items: center; gap: 14px;
+    border-bottom: 1px solid #2a2e36; flex-shrink: 0; z-index: 10;
+  }
+  .controls h1 { font-size: 14px; font-weight: 500; color: #e8e8e8; flex: 1; letter-spacing: 0.3px; }
+  .controls h1 span { color: #7a8290; font-weight: 400; }
+  .btn {
+    background: #2a2e36; border: 1px solid #3a3f4a; color: #d8d8d8; padding: 6px 14px;
+    border-radius: 4px; cursor: pointer; font-size: 12px; font-family: inherit; transition: all 0.15s;
+  }
+  .btn:hover { background: #353a45; border-color: #4a505c; }
+  .btn:disabled, .btn.disabled {
+    background: #1a1d24 !important; border-color: #2a2e36 !important;
+    color: #4a505c !important; cursor: not-allowed !important;
+  }
+  .btn:disabled:hover, .btn.disabled:hover {
+    background: #1a1d24 !important; border-color: #2a2e36 !important;
+  }
+  .btn.primary { background: #c4341c; border-color: #c4341c; color: white; }
+  .btn.primary:hover { background: #d8442c; }
+  .scene-indicator { display: flex; gap: 5px; align-items: center; }
+  .scene-dot {
+    width: 9px; height: 9px; border-radius: 50%; background: #3a3f4a; cursor: pointer; transition: all 0.2s;
+  }
+  .scene-dot.active { background: #c4341c; transform: scale(1.3); }
+  .scene-dot.complete { background: #5a7a4a; }
+  .scene-label { font-size: 11px; color: #7a8290; margin-left: 8px; min-width: 240px; }
+
+  /* ---------- Stage ---------- */
+  .stage {
+    flex: 1; position: relative; background: #14171d; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .scene {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.5s ease;
+  }
+  .scene.active { opacity: 1; pointer-events: all; }
+
+  /* ---------- Scene title ---------- */
+  .scene-title {
+    position: absolute; top: 28px; left: 50%; transform: translateX(-50%);
+    color: white; font-size: 13px; letter-spacing: 3px; opacity: 0.5;
+    text-transform: uppercase; z-index: 5; text-align: center;
+  }
+  .scene-title strong { color: #c4341c; font-weight: 600; }
+
+  /* ---------- Cursor ---------- */
+  .cursor {
+    position: absolute; width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(196, 52, 28, 0.35); border: 2px solid #c4341c;
+    pointer-events: none; z-index: 100;
+    transform: translate(-50%, -50%);
+    transition: top 0.7s cubic-bezier(0.4, 0, 0.2, 1), left 0.7s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
+    opacity: 0;
+  }
+  .cursor.visible { opacity: 1; }
+  .cursor.click { animation: clickPulse 0.35s ease; }
+  @keyframes clickPulse {
+    0% { transform: translate(-50%, -50%) scale(1); }
+    50% { transform: translate(-50%, -50%) scale(0.7); background: rgba(196, 52, 28, 0.6); }
+    100% { transform: translate(-50%, -50%) scale(1); }
+  }
+
+  /* ---------- Caption strip ---------- */
+  .caption-strip {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: linear-gradient(180deg, rgba(14,16,21,0) 0%, rgba(14,16,21,0.92) 60%);
+    padding: 60px 40px 24px; color: white; pointer-events: none; z-index: 6;
+  }
+  .caption-strip .caption-step {
+    font-size: 10px; letter-spacing: 2px; color: #c4341c; margin-bottom: 6px;
+  }
+  .caption-strip .caption-text {
+    font-size: 15px; line-height: 1.5; max-width: 880px;
+  }
+
+  /* ---------- INTRO scene ---------- */
+  .intro-stage {
+    width: 100%; height: 100%; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 40px; gap: 30px;
+  }
+  .intro-title {
+    font-size: 36px; font-weight: 700; color: white; text-align: center; letter-spacing: -0.5px;
+  }
+  .intro-title strong { color: #c4341c; }
+  .intro-subtitle {
+    font-size: 16px; color: #aab; text-align: center; max-width: 700px; line-height: 1.6;
+  }
+  .intro-streams {
+    display: flex; gap: 24px; margin-top: 14px;
+  }
+  .intro-stream {
+    width: 240px; padding: 24px; background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    color: #ccc; text-align: center;
+  }
+  .intro-stream.primary { border-color: #c4341c; background: rgba(196,52,28,0.08); }
+  .intro-stream .stream-icon { font-size: 40px; }
+  .intro-stream h3 { font-size: 16px; color: white; font-weight: 700; }
+  .intro-stream .stream-tag {
+    font-size: 9px; letter-spacing: 2px; text-transform: uppercase; padding: 3px 10px;
+    border-radius: 10px; background: #444; color: white;
+  }
+  .intro-stream.primary .stream-tag { background: #c4341c; }
+  .intro-stream p { font-size: 12px; line-height: 1.5; color: #aab; }
+  .intro-cta {
+    margin-top: 24px; font-size: 13px; color: #888; text-align: center;
+  }
+
+  /* ---------- Pronto Xi: Office-style ribbon UI ---------- */
+  .pronto-window {
+    width: 95%; max-width: 1280px; height: 88%; background: #d4dff0;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5); display: flex; flex-direction: column;
+    overflow: hidden; color: #222; font-family: 'Segoe UI', Tahoma, sans-serif;
+    border: 1px solid #6a82a3; border-radius: 4px;
+  }
+  .pronto-titlebar-bar {
+    background: linear-gradient(180deg, #e8eef7 0%, #b8c8df 100%);
+    padding: 4px 8px; display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid #8a9ab3; font-size: 12px; color: #1a3a6a;
+    height: 28px;
+  }
+  .pronto-titlebar-bar .p-logo {
+    background: #c4341c; color: white; font-weight: 700; font-style: italic;
+    padding: 2px 8px; border-radius: 2px; font-size: 13px;
+  }
+  .pronto-titlebar-bar .title { flex: 1; font-weight: 600; }
+  .pronto-titlebar-bar .win-controls { display: flex; gap: 2px; }
+  .pronto-titlebar-bar .win-btn {
+    width: 28px; height: 18px; background: #d4dff0; border: 1px solid #8a9ab3;
+    font-size: 9px; color: #333; display: flex; align-items: center; justify-content: center;
+  }
+  .pronto-tabs {
+    background: linear-gradient(180deg, #c8d6ea 0%, #aabcd6 100%);
+    padding: 0 8px; display: flex; gap: 2px; border-bottom: 1px solid #8a9ab3;
+    font-size: 12px;
+  }
+  .pronto-tabs .ptab {
+    padding: 4px 14px; cursor: pointer; color: #1a3a6a;
+    border-radius: 3px 3px 0 0;
+  }
+  .pronto-tabs .ptab.active {
+    background: linear-gradient(180deg, #f0f4fa 0%, #e0e8f4 100%);
+    color: #1a3a6a; border: 1px solid #8a9ab3; border-bottom: none;
+    padding: 4px 14px 5px;
+  }
+  .pronto-ribbon {
+    background: linear-gradient(180deg, #e8edf6 0%, #d4dff0 100%);
+    padding: 4px 6px; display: flex; gap: 0; border-bottom: 1px solid #8a9ab3;
+    align-items: stretch;
+  }
+  .ribbon-group {
+    display: flex; flex-direction: column; padding: 0 8px;
+    border-right: 1px solid #b8c5db; align-items: center; min-width: 60px;
+  }
+  .ribbon-group:last-child { border-right: none; }
+  .ribbon-group-content { display: flex; gap: 4px; flex: 1; align-items: flex-start; padding: 2px 0; }
+  .ribbon-group-label {
+    font-size: 10px; color: #555; padding: 2px 0; text-align: center; width: 100%;
+    border-top: 1px solid #c8d0e0; margin-top: 4px;
+  }
+  .ribbon-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 1px;
+    padding: 2px 6px; cursor: pointer; border-radius: 2px; min-width: 40px;
+    font-size: 10px; color: #222;
+  }
+  .ribbon-btn:hover { background: rgba(255,255,255,0.5); border: 1px solid #aabcd6; padding: 1px 5px; }
+  .ribbon-btn.large .icon { font-size: 22px; line-height: 1; margin-bottom: 2px; }
+  .ribbon-btn.small { flex-direction: row; min-width: 0; gap: 4px; padding: 1px 4px; font-size: 11px; }
+  .ribbon-btn.small .icon { font-size: 12px; }
+  .ribbon-btns-stack { display: flex; flex-direction: column; gap: 1px; }
+  .ribbon-btn .icon { font-size: 14px; }
+  .pronto-body-split {
+    flex: 1; display: flex; overflow: hidden; background: #f0f3f8;
+  }
+  .pronto-tree {
+    width: 280px; background: white; border-right: 1px solid #b8c5db;
+    overflow-y: auto; padding: 4px 0; font-size: 12px;
+  }
+  .pronto-tree-header {
+    background: linear-gradient(180deg, #e8edf6 0%, #d4dff0 100%);
+    padding: 4px 8px; font-size: 11px; color: #1a3a6a;
+    border-bottom: 1px solid #b8c5db; display: flex; gap: 6px;
+  }
+  .pronto-tree-header .pin { margin-left: auto; cursor: pointer; }
+  .p-tree-node {
+    padding: 2px 4px 2px 18px; cursor: pointer; position: relative;
+    color: #111; user-select: none;
+  }
+  .p-tree-node::before {
+    content: '▸'; position: absolute; left: 4px; top: 3px;
+    color: #555; font-size: 9px; transition: transform 0.2s;
+  }
+  .p-tree-node.expanded::before { transform: rotate(90deg); }
+  .p-tree-node.leaf::before { content: ''; }
+  .p-tree-children { display: none; padding-left: 14px; }
+  .p-tree-node.expanded > .p-tree-children { display: block; }
+  .p-tree-node .p-label {
+    padding: 1px 4px; display: inline-flex; align-items: center; gap: 4px;
+  }
+  .p-tree-node .p-icon {
+    width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11px;
+  }
+  .p-tree-node.highlight > .p-label {
+    background: #ffe0a0; outline: 2px solid #d97706; border-radius: 1px;
+  }
+  .p-tree-node.bold > .p-label { font-weight: 700; }
+  .pronto-main {
+    flex: 1; padding: 8px; overflow: auto; background: #d8d8e8; position: relative;
+  }
+  .rsea-notice {
+    background: #e8e0f8; border: 1px solid #aaa; padding: 0;
+    height: 100%; display: flex; flex-direction: column;
+  }
+  .rsea-notice-title {
+    text-align: center; padding: 8px; color: #1a3a6a; font-weight: 700; font-size: 14px;
+  }
+  .rsea-notice-body {
+    flex: 1; background: #fffbdd; border: 1px solid #d4cc88; margin: 0 8px 8px;
+    display: flex; flex-direction: column; align-items: center; padding: 14px;
+  }
+  .rsea-banner {
+    background: #000; padding: 16px; width: 100%; max-width: 600px; text-align: center;
+    margin-bottom: 14px;
+  }
+  .rsea-banner .rsea-logo-yellow {
+    color: #f7e500; font-weight: 900; font-style: italic; font-size: 34px;
+    letter-spacing: -1px; display: inline-block; transform: skewX(-8deg);
+  }
+  .rsea-banner .rsea-safety {
+    color: #f7e500; font-size: 11px; letter-spacing: 4px; display: block;
+    margin-top: 2px;
+  }
+  .rsea-info-block {
+    background: #76c5c5; width: 100%; max-width: 600px; padding: 16px;
+    text-align: center; color: #111; font-size: 13px; line-height: 1.8;
+  }
+  .rsea-info-block .live-copy { color: #c01515; font-weight: 700; text-decoration: underline; }
+  .rsea-info-block .home-link { color: #1a3a8a; text-decoration: underline; font-weight: 700; }
+
+  /* ---------- Pronto datagrid dialog (for Maintain Catalogues etc.) ---------- */
+  .px-dialog {
+    position: absolute; top: 20px; left: 40px; right: 20px; bottom: 20px;
+    background: white; border: 1px solid #6a82a3; box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    display: flex; flex-direction: column;
+  }
+  .px-dialog-title {
+    background: linear-gradient(180deg, #4a6fa5 0%, #335588 100%); color: white;
+    padding: 4px 10px; font-size: 12px; display: flex; align-items: center; gap: 8px;
+  }
+  .px-dialog-title .ttl { flex: 1; font-weight: 600; }
+  .px-dialog-title .win-btn-sm {
+    width: 22px; height: 18px; background: #d4dff0; border: 1px solid #aaa;
+    color: #333; font-size: 10px; display: flex; align-items: center; justify-content: center;
+  }
+  .px-dialog-tabs {
+    background: #e8edf6; padding: 4px 4px 0; display: flex; gap: 2px;
+    border-bottom: 1px solid #b8c5db;
+  }
+  .px-dialog-tabs .tab {
+    background: white; padding: 4px 16px; border: 1px solid #b8c5db; border-bottom: none;
+    font-size: 12px; cursor: pointer;
+  }
+  .px-grid {
+    flex: 1; background: white; overflow: auto; font-size: 12px;
+  }
+  .px-grid table { width: 100%; border-collapse: collapse; }
+  .px-grid th {
+    background: linear-gradient(180deg, #e8edf6 0%, #d4dff0 100%);
+    padding: 6px 10px; text-align: left; font-weight: 600; font-size: 12px;
+    border-right: 1px solid #b8c5db; border-bottom: 1px solid #8a9ab3; color: #1a3a6a;
+    position: relative; white-space: nowrap;
+  }
+  .px-grid th::after { content: ' ▾'; color: #888; font-size: 9px; }
+  .px-grid td {
+    padding: 4px 10px; border-right: 1px solid #e0e0e8; border-bottom: 1px solid #eee;
+    font-family: 'Consolas', monospace; font-size: 12px; white-space: nowrap;
+  }
+  .px-grid tr:nth-child(even) td { background: #eef3fa; }
+  .px-grid tr.highlight td { background: #ffe9b8 !important; color: #5a3500; }
+  .px-grid tr.new-row td {
+    background: #d4f0d4 !important; animation: rowFlash 1.4s ease-out forwards;
+  }
+  @keyframes rowFlash {
+    0% { background: #b0e0b0 !important; }
+    100% { background: #eef3fa !important; }
+  }
+  .px-status-spacer {
+    background: linear-gradient(180deg, #c8d6ea 0%, #aabcd6 50%, #5470a0 100%);
+    height: 60px; border-top: 1px solid #8a9ab3;
+  }
+  .px-actions {
+    background: #e8edf6; padding: 8px 14px; border-top: 1px solid #b8c5db;
+    display: flex; gap: 18px; font-size: 13px; flex-wrap: wrap;
+  }
+  .px-actions a { color: #1a3a6a; cursor: pointer; }
+  .px-actions a.primary { color: #1a3a6a; text-decoration: underline; font-weight: 600; }
+  .px-actions a:hover { text-decoration: underline; }
+
+  /* Entry dialog popup over grid */
+  .entry-dialog {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.95);
+    background: white; border: 1px solid #6a82a3; box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+    min-width: 480px; z-index: 100; opacity: 0; pointer-events: none;
+    transition: opacity 0.3s, transform 0.3s;
+  }
+  .entry-dialog.show { opacity: 1; transform: translate(-50%, -50%) scale(1); pointer-events: all; }
+  .entry-dialog .ed-title {
+    background: linear-gradient(180deg, #4a6fa5 0%, #335588 100%); color: white;
+    padding: 6px 12px; font-size: 13px; font-weight: 600;
+  }
+  .entry-dialog .ed-body {
+    padding: 20px; display: flex; flex-direction: column; gap: 12px;
+  }
+  .entry-dialog .ed-row { display: flex; gap: 10px; align-items: center; }
+  .entry-dialog .ed-label { width: 140px; text-align: right; font-size: 12px; color: #333; }
+  .entry-dialog .ed-input {
+    flex: 1; padding: 4px 8px; border: 1px solid #8a9ab3;
+    font-family: 'Consolas', monospace; font-size: 12px;
+  }
+  .entry-dialog .ed-input.typing { border-color: #c4341c; box-shadow: 0 0 0 2px rgba(196,52,28,0.15); }
+  .entry-dialog .ed-input.readonly { background: #f5f5f5; }
+  .entry-dialog .ed-footer {
+    padding: 10px; background: #f0f3f8; border-top: 1px solid #b8c5db;
+    display: flex; justify-content: flex-end; gap: 8px;
+  }
+  .entry-dialog .ed-btn {
+    padding: 4px 16px; background: linear-gradient(180deg, #fafafa 0%, #d4dff0 100%);
+    border: 1px solid #8a9ab3; border-radius: 2px; cursor: pointer; font-size: 12px;
+  }
+
+  /* SKU expansion popup (for style-based entry) */
+  .sku-popup {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.95);
+    background: white; border: 1px solid #6a82a3; box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+    width: 600px; max-height: 80%; z-index: 110; opacity: 0; pointer-events: none;
+    transition: opacity 0.3s, transform 0.3s;
+    display: flex; flex-direction: column;
+  }
+  .sku-popup.show { opacity: 1; transform: translate(-50%, -50%) scale(1); pointer-events: all; }
+  .sku-popup .sp-title {
+    background: linear-gradient(180deg, #4a6fa5 0%, #335588 100%); color: white;
+    padding: 6px 12px; font-size: 13px; font-weight: 600;
+  }
+  .sku-popup .sp-body { padding: 14px; flex: 1; overflow-y: auto; }
+  .sku-popup .sp-info {
+    font-size: 12px; color: #555; margin-bottom: 12px;
+    padding: 8px 12px; background: #f0f3f8; border-left: 3px solid #4a6fa5;
+  }
+  .sku-popup table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .sku-popup th {
+    background: linear-gradient(180deg, #e8edf6 0%, #d4dff0 100%);
+    padding: 5px 10px; text-align: left; font-weight: 600; color: #1a3a6a;
+    border: 1px solid #b8c5db;
+  }
+  .sku-popup td {
+    padding: 5px 10px; border-bottom: 1px solid #eee; font-family: 'Consolas', monospace;
+  }
+  .sku-popup tr.ticked td { background: #d4f0d4; }
+  .sku-popup .sp-footer {
+    padding: 10px; background: #f0f3f8; border-top: 1px solid #b8c5db;
+    display: flex; justify-content: flex-end; gap: 8px;
+  }
+  .sku-popup input[type=checkbox] {
+    transform: scale(1.2); cursor: pointer;
+  }
+
+  /* ---------- Transition scene ---------- */
+  .transition-stage {
+    width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 30px; position: relative;
+  }
+  .trans-panel {
+    width: 240px; height: 280px; background: white; border-radius: 8px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.4); padding: 16px;
+    display: flex; flex-direction: column; align-items: center; gap: 10px; color: #333;
+    position: relative;
+  }
+  .trans-panel.pronto { border-top: 4px solid #c4341c; }
+  .trans-panel.adobe { border-top: 4px solid #ee5b25; }
+  .trans-panel.store { border-top: 4px solid #f7e500; background: #1a1a1a; color: #f7e500; }
+  .trans-panel .tp-header {
+    width: 100%; text-align: center; font-size: 11px; letter-spacing: 2px;
+    text-transform: uppercase; color: #888; font-weight: 600;
+  }
+  .trans-panel .tp-icon { font-size: 56px; }
+  .trans-panel .tp-title { font-weight: 700; font-size: 15px; text-align: center; }
+  .trans-panel .tp-sub { font-size: 11px; color: #888; text-align: center; line-height: 1.5; }
+  .trans-panel.store .tp-sub { color: #aaa; }
+  .csv-packet {
+    position: absolute; background: #fff5f0; border: 1px solid #f5a880;
+    border-radius: 4px; padding: 6px 12px; font-family: 'Consolas', monospace;
+    font-size: 11px; color: #c4341c; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 20; white-space: nowrap;
+  }
+  .csv-packet::before { content: '📦 '; }
+  .trans-flow-arrow {
+    flex: 1; height: 3px; background: linear-gradient(90deg, transparent, #888, transparent);
+    margin: 0 -20px; max-width: 200px; min-width: 100px; align-self: center;
+  }
+  .trans-row { display: flex; align-items: center; gap: 0; }
+
+  /* ---------- Adobe Commerce placeholder ---------- */
+  .adobe-placeholder {
+    width: 75%; max-width: 900px; height: 75%; background: #2c2c2c;
+    border-radius: 8px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 24px; padding: 40px; color: #ccc;
+    border: 2px dashed #ee5b25;
+  }
+  .adobe-placeholder .ap-logo {
+    width: 84px; height: 84px; background: #ee5b25; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px; color: white; font-weight: 700;
+  }
+  .adobe-placeholder h2 { font-size: 22px; color: white; }
+  .adobe-placeholder .ap-msg {
+    background: rgba(238, 91, 37, 0.1); border: 1px solid rgba(238, 91, 37, 0.4);
+    padding: 18px 28px; border-radius: 6px; max-width: 600px; text-align: center;
+    color: #fcd; line-height: 1.6; font-size: 14px;
+  }
+  .adobe-placeholder .ap-msg strong { color: #ffac80; }
+  .adobe-placeholder .ap-sub {
+    font-size: 12px; color: #888; max-width: 600px; text-align: center; line-height: 1.6;
+  }
+
+  /* ---------- RSEA storefront (reused) ---------- */
+  .store-window {
+    width: 95%; max-width: 1280px; height: 88%; background: white;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5); display: flex; flex-direction: column;
+    overflow: hidden; color: #111; font-family: 'Helvetica Neue', Arial, sans-serif;
+  }
+  .store-browser-bar {
+    background: #f0f0f0; padding: 8px 14px; display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid #d4d4d4; flex-shrink: 0;
+  }
+  .store-browser-bar .dots span {
+    display: inline-block; width: 11px; height: 11px; border-radius: 50%;
+    margin-right: 6px; vertical-align: middle;
+  }
+  .store-browser-bar .dots span:nth-child(1) { background: #ff5f57; }
+  .store-browser-bar .dots span:nth-child(2) { background: #ffbd2e; }
+  .store-browser-bar .dots span:nth-child(3) { background: #28c940; }
+  .store-browser-bar .url {
+    flex: 1; background: white; border-radius: 14px; padding: 4px 12px;
+    font-size: 12px; color: #333; border: 1px solid #d4d4d4;
+  }
+  .store-header {
+    background: #000; padding: 12px 28px; display: flex; align-items: center; gap: 24px;
+    color: white; flex-shrink: 0;
+  }
+  .store-header .nav-link { color: white; font-size: 13px; cursor: pointer; }
+  .store-logo {
+    color: #f7e500; font-weight: 900; font-style: italic; font-size: 30px;
+    letter-spacing: -1px; transform: skewX(-8deg); margin-right: 18px;
+  }
+  .store-logo small { font-size: 9px; letter-spacing: 3px; display: block; }
+  .store-header .acct-pill {
+    background: #f7e500; color: #111; padding: 4px 12px; font-size: 11px; font-weight: 700;
+    border-radius: 2px;
+  }
+  .store-header .cat-pill {
+    background: transparent; color: white; padding: 4px 12px; font-size: 13px;
+    border: 1px solid white; border-radius: 2px; cursor: pointer;
+  }
+  .store-header .cat-pill-y {
+    background: #f7e500; color: #111; padding: 4px 12px; font-size: 11px; font-weight: 700;
+    border-radius: 2px;
+  }
+  .store-header .right { margin-left: auto; display: flex; align-items: center; gap: 16px; font-size: 13px; }
+  .store-header .search-box {
+    background: white; padding: 6px 12px; border-radius: 2px; color: #888;
+    font-size: 12px; min-width: 220px;
+  }
+  .store-cart-pill { color: #f7e500; font-weight: 700; font-size: 13px; }
+  .store-catalogue-bar {
+    background: #f7e500; padding: 8px 28px; font-weight: 700; font-size: 13px;
+    color: #111; letter-spacing: 1px;
+  }
+  .store-body { flex: 1; display: flex; overflow: hidden; }
+  .store-sidebar {
+    width: 220px; background: #fafafa; padding: 18px 16px; border-right: 1px solid #e4e4e4;
+    overflow-y: auto;
+  }
+  .store-cat {
+    background: #e8e8e8; padding: 10px 14px; margin-bottom: 6px; font-weight: 700;
+    font-size: 12px; cursor: pointer; transition: background 0.2s;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .store-cat:hover { background: #d8d8d8; }
+  .store-cat.active { background: #111; color: white; }
+  .store-cat .chev { font-size: 10px; color: #888; }
+  .store-cat.active .chev { color: white; }
+  .store-subcats { display: none; padding: 4px 0 8px; }
+  .store-cat.expanded + .store-subcats { display: block; }
+  .store-subcat {
+    padding: 8px 14px 8px 18px; font-size: 12px; cursor: pointer; color: #333;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .store-subcat:hover { background: #f5f5f5; }
+  .store-subcat.active { background: #f7e500; font-weight: 700; }
+  .store-content {
+    flex: 1; padding: 24px 28px; overflow-y: auto; background: white;
+  }
+  .store-products-bc { font-size: 12px; color: #777; margin-bottom: 8px; }
+  .store-products-bc .crumb-cur { color: #111; font-weight: 600; }
+  .store-products-title { font-size: 26px; font-weight: 700; margin-bottom: 16px; }
+  .store-products-sortbar {
+    background: #f5f5f5; padding: 8px 14px; display: flex; align-items: center;
+    font-size: 12px; gap: 14px; margin-bottom: 14px; border: 1px solid #e4e4e4;
+  }
+  .store-products-sortbar .sort-input {
+    background: white; padding: 4px 22px 4px 10px; border: 1px solid #d4d4d4;
+    font-size: 12px; color: #888;
+  }
+  .store-product-row {
+    display: grid; grid-template-columns: 110px 1fr 180px 100px 140px;
+    align-items: center; padding: 14px 14px;
+    border-top: 1px solid #f0f0f0; gap: 14px;
+    opacity: 0; transform: translateY(8px); transition: opacity 0.5s, transform 0.5s;
+  }
+  .store-product-row.show { opacity: 1; transform: translateY(0); }
+  .store-product-row:hover { background: #fafafa; }
+  .store-product-img {
+    width: 90px; height: 90px; background: #f5f5f5; border-radius: 2px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .product-icon-svg { width: 70px; height: 70px; }
+  .store-product-info .star { color: #ccc; font-size: 14px; }
+  .store-product-info .sku { font-size: 10px; color: #888; margin: 2px 0; }
+  .store-product-info .name { font-weight: 700; font-size: 13px; }
+  .store-product-selects { display: flex; flex-direction: column; gap: 6px; }
+  .store-select {
+    border: 1px solid #d4d4d4; padding: 5px 8px; font-size: 11px; color: #888;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .store-product-qty { display: flex; align-items: center; border: 1px solid #d4d4d4; }
+  .store-product-qty button {
+    width: 24px; height: 26px; background: white; border: none; cursor: pointer; font-size: 13px;
+  }
+  .store-product-qty input {
+    width: 36px; height: 26px; border: none; border-left: 1px solid #d4d4d4;
+    border-right: 1px solid #d4d4d4; text-align: center; font-size: 12px;
+  }
+  .store-product-price { font-weight: 700; font-size: 15px; text-align: right; padding-right: 12px; }
+  .store-addcart {
+    background: #f7e500; color: #111; padding: 7px 14px; border: none; cursor: pointer;
+    font-weight: 700; font-size: 11px; display: flex; align-items: center; gap: 6px; justify-content: center;
+  }
+
+  /* ---------- Overview scenes (Entitlements, Uniforms) ---------- */
+  .overview-stage {
+    width: 100%; height: 100%; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 30px; gap: 24px;
+  }
+  .overview-title {
+    font-size: 28px; font-weight: 700; color: white; text-align: center; letter-spacing: -0.3px;
+  }
+  .overview-title strong { color: #c4341c; }
+  .overview-subtitle {
+    font-size: 14px; color: #aab; text-align: center; max-width: 720px;
+    line-height: 1.5;
+  }
+  .overview-diagram {
+    display: flex; gap: 16px; align-items: stretch; margin: 14px 0;
+    max-width: 1100px; width: 100%; flex-wrap: wrap; justify-content: center;
+  }
+  .ov-card {
+    flex: 1; min-width: 200px; max-width: 250px;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px; padding: 18px 16px; color: #ccc;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .ov-card .ov-icon { font-size: 26px; }
+  .ov-card .ov-label {
+    font-size: 10px; letter-spacing: 2px; color: #888;
+    text-transform: uppercase; font-weight: 600;
+  }
+  .ov-card h4 { font-size: 14px; color: white; font-weight: 700; }
+  .ov-card p { font-size: 12px; line-height: 1.5; color: #aab; }
+  .ov-card .ov-fields {
+    background: rgba(0,0,0,0.2); border-radius: 4px; padding: 8px;
+    font-family: 'Consolas', monospace; font-size: 10px; color: #aac0d0;
+    line-height: 1.6;
+  }
+  .ov-arrow {
+    display: flex; align-items: center; color: #666; font-size: 20px;
+    margin: 0 -8px; z-index: 1;
+  }
+  .overview-statuses {
+    display: flex; gap: 0; align-items: center; margin: 6px 0;
+    flex-wrap: wrap; justify-content: center;
+  }
+  .ov-status {
+    background: #2a2e36; border: 1px solid #3a3f4a; padding: 7px 14px;
+    font-size: 11px; color: #ccc; border-radius: 14px; margin: 3px;
+  }
+  .ov-status.active { background: #c4341c; border-color: #c4341c; color: white; }
+  .ov-status-arrow { color: #555; padding: 0 4px; }
+  .overview-footnote {
+    font-size: 11px; color: #777; text-align: center; max-width: 720px;
+    padding-top: 8px; border-top: 1px solid #2a2e36; margin-top: 14px;
+    line-height: 1.5;
+  }
+  .overview-footnote strong { color: #aab; }
+
+  /* ---------- Intro dialog (source screen, sits inside Pronto window, swaps with target dialog) ---------- */
+  .pronto-main { position: relative; }
+  .intro-dialog {
+    z-index: 4;
+    opacity: 1; pointer-events: all;
+    transition: opacity 0.55s ease;
+  }
+  .intro-dialog.fading { opacity: 0; pointer-events: none; }
+  .intro-dialog .intro-from-tag {
+    background: #c4341c; color: white; padding: 2px 8px; border-radius: 3px;
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    margin-right: 8px;
+  }
+  .intro-dialog-pulse {
+    animation: introPulse 1.2s ease-in-out infinite;
+    padding: 2px 8px; border-radius: 3px;
+  }
+  @keyframes introPulse {
+    0%, 100% { background: rgba(196, 52, 28, 0); color: #c4341c; }
+    50% { background: rgba(196, 52, 28, 0.2); color: #c4341c; }
+  }
+  /* Target dialog hidden while intro is visible — we just let z-index do it */
+  /* ---------- Adobe Commerce admin UI ---------- */
+  .adobe-window {
+    width: 95%; max-width: 1280px; height: 88%; background: white;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5); display: flex;
+    overflow: hidden; color: #303030; font-family: 'Helvetica Neue', Arial, sans-serif;
+    border-radius: 4px;
+  }
+  .ac-sidebar {
+    width: 60px; background: #303030; display: flex; flex-direction: column;
+    align-items: center; padding: 0; flex-shrink: 0;
+  }
+  .ac-sidebar .ac-logo {
+    width: 60px; height: 56px; background: #c4341c;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 22px; font-weight: 700;
+  }
+  .ac-sidebar .ac-nav {
+    display: flex; flex-direction: column; align-items: center; padding: 8px 0;
+    width: 100%; gap: 2px;
+  }
+  .ac-sidebar .ac-nav-item {
+    width: 56px; padding: 10px 4px; display: flex; flex-direction: column;
+    align-items: center; gap: 3px; color: #999; cursor: pointer;
+    font-size: 9px; line-height: 1.2; text-align: center;
+  }
+  .ac-sidebar .ac-nav-item:hover { color: white; }
+  .ac-sidebar .ac-nav-item.active {
+    background: #1e1e1e; color: white; border-left: 3px solid #f4f4f4;
+    padding-left: 1px;
+  }
+  .ac-sidebar .ac-nav-item .ac-nav-icon { font-size: 14px; opacity: 0.8; }
+
+  .ac-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #f4f4f4; }
+  .ac-topbar {
+    background: white; padding: 14px 28px; border-bottom: 1px solid #e0e0e0;
+    display: flex; align-items: center; gap: 18px;
+  }
+  .ac-topbar .ac-page-title { font-size: 22px; font-weight: 600; color: #303030; flex: 1; }
+  .ac-topbar .ac-icon {
+    color: #999; cursor: pointer; position: relative; font-size: 14px;
+  }
+  .ac-topbar .ac-icon .ac-badge {
+    position: absolute; top: -4px; right: -6px;
+    background: #c4341c; color: white; border-radius: 50%;
+    width: 16px; height: 16px; font-size: 9px; display: flex;
+    align-items: center; justify-content: center; font-weight: 700;
+  }
+  .ac-topbar .ac-user { font-size: 12px; color: #555; cursor: pointer; }
+  .ac-add-btn-bar {
+    background: #fafafa; padding: 16px 28px; display: flex; justify-content: flex-end;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  .ac-add-btn {
+    background: #ee672c; color: white; padding: 8px 20px; font-size: 13px; font-weight: 600;
+    border: none; cursor: pointer; display: flex; align-items: center; gap: 12px;
+    border-radius: 2px;
+  }
+  .ac-add-btn .ac-add-caret {
+    border-left: 1px solid rgba(255,255,255,0.3); padding-left: 10px; margin-left: 4px;
+  }
+  .ac-toolbar {
+    background: white; padding: 14px 28px; display: flex; align-items: center;
+    gap: 14px; border-bottom: 1px solid #e0e0e0;
+  }
+  .ac-search-box {
+    flex: 1; background: white; border: 1px solid #cdcdcd; padding: 7px 10px;
+    font-size: 13px; color: #888; display: flex; align-items: center; gap: 8px;
+    max-width: 360px;
+  }
+  .ac-search-box .magnifier { color: #555; }
+  .ac-action-select, .ac-page-select {
+    background: white; border: 1px solid #cdcdcd; padding: 7px 28px 7px 12px;
+    font-size: 13px; color: #303030; cursor: pointer;
+  }
+  .ac-records { font-size: 13px; color: #555; }
+  .ac-toolbar-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+  .ac-page-controls { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #555; }
+  .ac-page-controls .ac-page-btn {
+    background: white; border: 1px solid #cdcdcd; padding: 5px 10px; cursor: pointer;
+  }
+  .ac-page-controls input {
+    background: white; border: 1px solid #cdcdcd; padding: 5px 8px; width: 38px;
+    text-align: center; font-size: 13px;
+  }
+  .ac-filter-btn, .ac-view-btn, .ac-columns-btn {
+    background: white; border: 1px solid #cdcdcd; padding: 7px 12px;
+    font-size: 12px; color: #303030; cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .ac-grid-wrap { flex: 1; background: white; overflow: auto; }
+  .ac-grid { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .ac-grid thead tr { background: #303030; }
+  .ac-grid th {
+    color: white; text-align: left; padding: 12px 14px; font-weight: 600;
+    font-size: 12px; border-right: 1px solid #555; white-space: nowrap;
+  }
+  .ac-grid th .sort { margin-left: 6px; color: #aaa; }
+  .ac-grid td {
+    padding: 14px 14px; border-bottom: 1px solid #eee; color: #303030; vertical-align: middle;
+  }
+  .ac-grid tr:nth-child(even) td { background: #fafafa; }
+  .ac-grid tr.new-row td {
+    background: #e8f4e8 !important; animation: acRowFlash 1.4s ease-out forwards;
+  }
+  @keyframes acRowFlash {
+    0% { background: #c8e8c8 !important; }
+    100% { background: #fafafa !important; }
+  }
+  .ac-grid .ac-thumb {
+    width: 32px; height: 32px; background: #e0e0e0; border-radius: 2px;
+    display: flex; align-items: center; justify-content: center; color: #999;
+  }
+  .ac-grid .ac-thumb svg { width: 22px; height: 22px; }
+  .ac-grid .ac-edit-link {
+    color: #007bdb; cursor: pointer; text-decoration: none;
+  }
+  .ac-grid .ac-edit-link:hover { text-decoration: underline; }
+  .ac-grid .catalog-pill {
+    display: inline-block; padding: 3px 10px; border-radius: 11px;
+    font-size: 11px; font-weight: 600;
+  }
+  .ac-grid .catalog-pill.global { background: #e8e8e8; color: #303030; }
+  .ac-grid .catalog-pill.scoped { background: #fff0e8; color: #c4341c; }
+  .ac-grid .catalog-pill.scoped-blue { background: #e8f0fa; color: #1565c0; }
+  .ac-grid .catalog-pill.scoped-green { background: #e8f5e9; color: #2e7d32; }
+  .ac-grid .catalog-pill.scoped-purple { background: #f3e5f5; color: #6a1b9a; }
+
+  /* ---------- Adobe screen swap (grid → edit) ---------- */
+  .ac-screen {
+    flex: 1; display: flex; flex-direction: column; overflow: hidden;
+    transition: opacity 0.5s ease;
+  }
+  .ac-screen.fading { opacity: 0; pointer-events: none; }
+  .ac-screen-stack {
+    flex: 1; position: relative; display: flex; flex-direction: column;
+  }
+  .ac-screen.layered {
+    position: absolute; inset: 0;
+  }
+
+  /* "Edit" pulse highlight */
+  .ac-edit-pulse {
+    animation: acEditPulse 1.2s ease-in-out infinite;
+    padding: 2px 8px; border-radius: 3px; font-weight: 700 !important;
+  }
+  @keyframes acEditPulse {
+    0%, 100% { background: rgba(196, 52, 28, 0); }
+    50% { background: rgba(196, 52, 28, 0.2); }
+  }
+
+  /* Category edit page */
+  .ac-edit-page {
+    flex: 1; display: flex; flex-direction: column; background: white; overflow-y: auto;
+  }
+  .ac-edit-header {
+    background: white; padding: 14px 28px; border-bottom: 1px solid #e0e0e0;
+    display: flex; align-items: center; gap: 18px;
+  }
+  .ac-edit-title { font-size: 22px; font-weight: 600; color: #303030; flex: 1; }
+  .ac-edit-title .ac-edit-title-prefix { color: #888; font-weight: 400; }
+  .ac-edit-tabs {
+    background: white; padding: 0 28px; display: flex; gap: 0;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  .ac-edit-tab {
+    padding: 12px 0; margin-right: 28px; font-size: 13px; color: #888;
+    cursor: pointer; border-bottom: 2px solid transparent;
+  }
+  .ac-edit-tab.active {
+    color: #303030; font-weight: 600; border-bottom-color: #ee672c;
+  }
+  .ac-edit-body { padding: 0 28px; background: white; }
+  .ac-edit-section {
+    border-bottom: 1px solid #e0e0e0; padding: 20px 0;
+  }
+  .ac-edit-section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 15px; font-weight: 600; color: #303030; margin-bottom: 18px;
+    cursor: pointer;
+  }
+  .ac-edit-section-header .ac-collapse-toggle {
+    color: #888; font-size: 14px; transition: transform 0.3s;
+  }
+  .ac-edit-section.collapsed .ac-collapse-toggle { transform: rotate(-90deg); }
+  .ac-edit-section.collapsed .ac-edit-section-body { display: none; }
+
+  .ac-form-row {
+    display: grid; grid-template-columns: 180px 1fr;
+    gap: 18px; margin-bottom: 16px; align-items: flex-start;
+  }
+  .ac-form-label {
+    font-size: 13px; color: #303030; padding-top: 6px;
+  }
+  .ac-form-label .scope-hint {
+    display: block; font-size: 10px; color: #888;
+    font-family: 'Consolas', monospace; margin-top: 2px;
+  }
+  .ac-form-value {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .ac-form-input {
+    background: white; border: 1px solid #cdcdcd; padding: 8px 10px;
+    font-size: 13px; color: #303030; font-family: inherit;
+    max-width: 480px; min-height: 34px;
+  }
+  .ac-form-input.typing {
+    border-color: #ee672c; box-shadow: 0 0 0 2px rgba(238, 103, 44, 0.15);
+  }
+  .ac-form-input.filled { color: #303030; }
+
+  /* Toggle switch */
+  .ac-toggle {
+    display: inline-flex; align-items: center; gap: 10px;
+  }
+  .ac-toggle-track {
+    width: 44px; height: 22px; background: #ccc; border-radius: 12px;
+    position: relative; cursor: pointer; transition: background 0.25s;
+  }
+  .ac-toggle-track .ac-toggle-thumb {
+    position: absolute; top: 2px; left: 2px;
+    width: 18px; height: 18px; background: white;
+    border-radius: 50%; transition: left 0.25s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .ac-toggle.on .ac-toggle-track { background: #5cb85c; }
+  .ac-toggle.on .ac-toggle-track .ac-toggle-thumb { left: 24px; }
+  .ac-toggle-label { font-size: 13px; color: #303030; }
+
+  /* Upload buttons */
+  .ac-upload-row { display: flex; gap: 10px; margin-bottom: 12px; }
+  .ac-btn-secondary {
+    background: white; color: #303030; border: 1px solid #cdcdcd;
+    padding: 8px 14px; font-size: 13px; cursor: pointer; font-family: inherit;
+  }
+  .ac-btn-secondary:hover { background: #f5f5f5; }
+  .ac-upload-hint { font-size: 11px; color: #888; margin-bottom: 10px; }
+  .ac-image-drop {
+    width: 220px; height: 130px; border: 2px dashed #cdcdcd; border-radius: 4px;
+    background: #fafafa; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 8px;
+    color: #888; font-size: 12px; transition: background 0.5s ease;
+    position: relative; overflow: hidden;
+  }
+  .ac-image-drop .camera-icon { font-size: 28px; opacity: 0.5; }
+  .ac-image-drop .drop-hint { color: #007bdb; font-size: 11px; text-align: center; line-height: 1.4; }
+  .ac-image-drop.uploaded {
+    border-style: solid; border-color: #5cb85c; background: #f0f8f0;
+  }
+  .ac-image-drop.uploaded .upload-placeholder { display: none; }
+  .ac-image-drop .preview {
+    position: absolute; inset: 0; display: none;
+    background: linear-gradient(135deg, #ff6a3a 0%, #c4341c 100%);
+    align-items: flex-end; justify-content: center;
+    padding: 12px;
+  }
+  .ac-image-drop.uploaded .preview { display: flex; }
+  .ac-image-drop .preview-img {
+    width: 100%; height: 100%; position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ac-image-drop .preview-img svg { width: 70%; height: 70%; }
+  .ac-image-drop .preview-name {
+    background: rgba(0,0,0,0.6); color: white; padding: 3px 8px;
+    border-radius: 3px; font-family: 'Consolas', monospace; font-size: 10px;
+    position: relative; z-index: 2;
+  }
+
+  /* Description placeholder (Page Builder) */
+  .ac-description-area {
+    border: 1px dashed #cdcdcd; padding: 30px;
+    text-align: center; color: #888; font-size: 12px;
+    border-radius: 4px; background: #fafafa;
+  }
+  .ac-description-area .hand-icon { font-size: 30px; margin-bottom: 8px; }
+  .ac-pagebuilder-btn {
+    background: white; border: 1px solid #cdcdcd; padding: 8px 14px;
+    font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  }
+
+  /* ---------- Alignment gaps scene ---------- */
+  .gaps-stage {
+    width: 100%; height: 100%; padding: 30px 50px; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 18px; align-items: center;
+  }
+  .gaps-title {
+    font-size: 26px; font-weight: 700; color: white; text-align: center; margin-top: 10px;
+  }
+  .gaps-title strong { color: #c4341c; }
+  .gaps-subtitle {
+    font-size: 13px; color: #aab; text-align: center; max-width: 800px; line-height: 1.6;
+  }
+  .gaps-list { width: 100%; max-width: 1100px; display: flex; flex-direction: column; gap: 12px; }
+  .gap-item {
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px; padding: 14px 18px;
+    display: grid; grid-template-columns: 80px minmax(0, 1fr) 30px minmax(0, 1fr); gap: 14px;
+    align-items: stretch;
+  }
+  .gap-item.severity-high { border-left: 4px solid #c4341c; }
+  .gap-item.severity-med { border-left: 4px solid #d97706; }
+  .gap-item.severity-low { border-left: 4px solid #5a7a4a; }
+  .gap-label {
+    display: flex; flex-direction: column; gap: 4px; align-items: flex-start;
+    padding-right: 10px;
+  }
+  .gap-label .gap-num {
+    background: #2a2e36; color: #aab; padding: 4px 8px; border-radius: 4px;
+    font-size: 12px; font-weight: 700;
+  }
+  .gap-label .gap-sev {
+    font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; font-weight: 700;
+  }
+  .gap-item.severity-high .gap-sev { color: #c4341c; }
+  .gap-item.severity-med .gap-sev { color: #d97706; }
+  .gap-item.severity-low .gap-sev { color: #5a9a4a; }
+  .gap-side {
+    background: rgba(0,0,0,0.2); border-radius: 6px; padding: 12px 14px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .gap-side .gap-side-label {
+    font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: #888; font-weight: 700;
+  }
+  .gap-side.pronto .gap-side-label { color: #c4341c; }
+  .gap-side.adobe .gap-side-label { color: #ee672c; }
+  .gap-side h5 { font-size: 13px; color: white; font-weight: 600; line-height: 1.4; }
+  .gap-side p { font-size: 11px; color: #aab; line-height: 1.5; }
+  .gap-side code {
+    background: rgba(255,255,255,0.05); padding: 1px 5px; border-radius: 3px;
+    font-family: 'Consolas', monospace; font-size: 10px; color: #ddd;
+  }
+  .gap-vs {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: #555; font-weight: 700;
+  }
+  .gaps-footer {
+    margin-top: 14px; max-width: 900px; padding: 16px 24px;
+    background: rgba(196, 52, 28, 0.08); border: 1px solid rgba(196, 52, 28, 0.3);
+    border-radius: 6px; color: #ffac80; font-size: 12px; line-height: 1.6;
+    text-align: center;
+  }
+  .gaps-footer strong { color: white; }
+
+</style>
+</head>
+<body>
+
+<div class="controls">
+  <h1>Future-State Catalogue Workflow <span>— Pronto Xi → Adobe Commerce → Customer</span></h1>
+  <div class="scene-indicator">
+    <span class="scene-dot active" data-scene="0"></span>
+    <span class="scene-dot" data-scene="1"></span>
+    <span class="scene-dot" data-scene="2"></span>
+    <span class="scene-dot" data-scene="3"></span>
+    <span class="scene-dot" data-scene="4"></span>
+    <span class="scene-dot" data-scene="5"></span>
+    <span class="scene-dot" data-scene="6"></span>
+    <span class="scene-dot" data-scene="7"></span>
+    <span class="scene-dot" data-scene="8"></span>
+    <span class="scene-dot" data-scene="9"></span>
+    <span class="scene-dot" data-scene="10"></span>
+    <span class="scene-dot" data-scene="11"></span>
+    <span class="scene-label" id="sceneLabel">Scene 1 / 12 — Introduction</span>
+  </div>
+  <button class="btn" id="prevBtn">◀ Previous</button>
+  <button class="btn primary" id="playBtn">▶ Play scene</button>
+  <button class="btn" id="nextBtn">Next ▶</button>
+  <button class="btn" id="restartBtn">⟲ Restart</button>
+</div>
+
+<div class="stage" id="stage">
+
+  <!-- ============================================================ -->
+  <!-- SCENE 0: Introduction -->
+  <!-- ============================================================ -->
+  <div class="scene active" data-scene="0">
+    <div class="intro-stage">
+      <div class="intro-title">RSEA Future-State Workflow<br>in <strong>Pronto Xi</strong> + <strong>Adobe Commerce</strong></div>
+      <div class="intro-subtitle">
+        With the migration to Adobe Commerce, Pronto Xi becomes the master system for catalogue,
+        entitlement and uniform data. This walkthrough focuses on the new <strong style="color: #c4341c;">Catalogue</strong> flow, with a brief overview of the other two streams.
+      </div>
+      <div class="intro-streams">
+        <div class="intro-stream primary">
+          <div class="stream-icon">📚</div>
+          <div class="stream-tag">Focus</div>
+          <h3>Catalogues</h3>
+          <p>Customer-specific product groupings with a 3-level category hierarchy. Used by Adobe Commerce to restrict what each user can view and purchase.</p>
+        </div>
+        <div class="intro-stream">
+          <div class="stream-icon">🎟️</div>
+          <div class="stream-tag">Overview</div>
+          <h3>Entitlements</h3>
+          <p>Per-user purchasing rules with spend/quantity limits and renewal cycles. Enforced at Sales Order &amp; POS entry.</p>
+        </div>
+        <div class="intro-stream">
+          <div class="stream-icon">👕</div>
+          <div class="stream-tag">Overview</div>
+          <h3>Uniforms</h3>
+          <p>Workflow for custom-branded apparel requests — colours, embroidery and placement, tracked through approval stages.</p>
+        </div>
+      </div>
+      <div class="intro-cta">▶ Press <strong>Next</strong> to begin.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SCENE 1: Navigate to Adobe Catalogue Management -->
+  <!-- ============================================================ -->
+  <div class="scene" data-scene="1">
+    <div class="scene-title"><strong>SCENE 2</strong> &nbsp;·&nbsp; Pronto Xi — Navigate to Adobe Catalogue Management</div>
+    <div class="pronto-window">
+      <div class="pronto-titlebar-bar">
+        <div class="p-logo">Px</div>
+        <div class="title">Pronto Xi — RSEA - Aus Pty Ltd - TEST</div>
+        <div class="win-controls"><div class="win-btn">_</div><div class="win-btn">▢</div><div class="win-btn">✕</div></div>
+      </div>
+      <div class="pronto-tabs">
+        <div class="ptab active">Home</div>
+        <div class="ptab">Settings</div>
+        <div class="ptab">Navigation</div>
+        <div class="ptab">Keyboard</div>
+        <div class="ptab">Help</div>
+      </div>
+      <div class="pronto-ribbon">
+        <div class="ribbon-group">
+          <div class="ribbon-group-content">
+            <div class="ribbon-btns-stack">
+              <div class="ribbon-btn small"><span class="icon">✂️</span>Cut</div>
+              <div class="ribbon-btn small"><span class="icon">📋</span>Copy Field</div>
+              <div class="ribbon-btn small"><span class="icon">↶</span>Undo</div>
+            </div>
+            <div class="ribbon-btn large"><span class="icon">📄</span>Copy</div>
+            <div class="ribbon-btn large"><span class="icon">📋</span>Paste</div>
+          </div>
+          <div class="ribbon-group-label">Clipboard</div>
+        </div>
+        <div class="ribbon-group">
+          <div class="ribbon-group-content">
+            <div class="ribbon-btn large"><span class="icon" style="color: #d97706;">🔑</span>Hot Key</div>
+            <div class="ribbon-btn large"><span class="icon">⌨️</span>Shortcuts</div>
+            <div class="ribbon-btn large"><span class="icon" style="color: #c4341c;">❤️</span>Favourites</div>
+          </div>
+          <div class="ribbon-group-label">Tools</div>
+        </div>
+        <div class="ribbon-group">
+          <div class="ribbon-group-content">
+            <div class="ribbon-btn large"><span class="icon">📤</span>Export</div>
+            <div class="ribbon-btn large"><span class="icon">📑</span>Report</div>
+            <div class="ribbon-btn large"><span class="icon">⚙️</span>Custom</div>
+          </div>
+          <div class="ribbon-group-label">Data Grid Export</div>
+        </div>
+        <div class="ribbon-group">
+          <div class="ribbon-group-content">
+            <div class="ribbon-btn large"><span class="icon">⬅️</span>Back</div>
+            <div class="ribbon-btn large"><span class="icon">➡️</span>Forward</div>
+            <div class="ribbon-btns-stack">
+              <div class="ribbon-btn small"><span class="icon">🏠</span>Home</div>
+              <div class="ribbon-btn small"><span class="icon">🔄</span>Refresh</div>
+            </div>
+          </div>
+          <div class="ribbon-group-label">Web Navigation</div>
+        </div>
+      </div>
+      <div class="pronto-body-split">
+        <div class="pronto-tree">
+          <div class="pronto-tree-header">Pronto Xi <span class="pin">📌</span> <span>✕</span></div>
+          <div class="p-tree-node expanded" style="padding-left: 6px;">
+            <div class="p-label"><span class="p-icon">📁</span>Company Selection</div>
+            <div class="p-tree-children">
+              <div class="p-tree-node expanded">
+                <div class="p-label"><span class="p-icon">🏢</span>RSEA - Aus Pty Ltd - TEST</div>
+                <div class="p-tree-children">
+                  <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">⭐</span>Favourites</div></div>
+                  <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📁</span>Product Team</div></div>
+                  <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📁</span>Direct Sales</div></div>
+                  <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📁</span>Customer Relationship Management</div></div>
+                  <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📁</span>Accounts Receivable</div></div>
+                  <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📁</span>Accounts Payable</div></div>
+
+                  <div class="p-tree-node" id="s1-inventory">
+                    <div class="p-label"><span class="p-icon">📁</span>Inventory</div>
+                    <div class="p-tree-children">
+                      <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📄</span>Inventory Enquiry</div></div>
+                      <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📄</span>Maintain Inventory</div></div>
+                      <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📁</span>Prices Control</div></div>
+                      <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📁</span>Costs Control</div></div>
+                      <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon" style="color: #2a8aae;">🌐</span>Web CSS Menu</div></div>
+
+                      <div class="p-tree-node" id="s1-acm">
+                        <div class="p-label"><span class="p-icon" style="color: #ee5b25;">🅐</span>Adobe Catalogue Management</div>
+                        <div class="p-tree-children">
+                          <div class="p-tree-node leaf" id="s1-maintcat"><div class="p-label"><span class="p-icon">📄</span>Maintain Catalogues</div></div>
+                          <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📄</span>Maintain Entitlements</div></div>
+                          <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📄</span>Maintain Uniforms</div></div>
+                          <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📄</span>eCommerce Users (read-only)</div></div>
+                          <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📄</span>eCommerce Order Hold Review</div></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="pronto-main">
+          <div class="rsea-notice">
+            <div class="rsea-notice-title">Pronto Xi Notice Board - Live Company Copy - Warning Notice</div>
+            <div class="rsea-notice-body">
+              <div class="rsea-banner">
+                <div class="rsea-logo-yellow">RSEA</div>
+                <span class="rsea-safety">SAFETY</span>
+              </div>
+              <div class="rsea-info-block">
+                <span class="live-copy">Live Company Copy</span><br><br>
+                <strong>Company: RSEA - Aus Pty Ltd</strong><br>
+                <strong>Copied: 19-DEC-2025 10:49:11</strong><br><br>
+                <span class="home-link">RSEA Pty Ltd - Home</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cursor" id="cursor1"></div>
+    <div class="caption-strip">
+      <div class="caption-step" id="s1-step">STEP 1 — Pronto Navigation</div>
+      <div class="caption-text" id="s1-caption">In the future-state model, Pronto Xi gains a new menu group: <strong>Inventory → Adobe Catalogue Management</strong>, holding the custom screens for Catalogues, Entitlements and Uniforms. Expand the tree to <strong>Maintain Catalogues</strong>.</div>
+    </div>
+  </div>
+
+
+  <!-- ============================================================ -->
+  <!-- SCENE 2: Maintain Catalogues — Entry mode, create new catalogue -->
+  <!-- ============================================================ -->
+  <div class="scene" data-scene="2">
+    <div class="scene-title"><strong>SCENE 3</strong> &nbsp;·&nbsp; Maintain Catalogues — Create New</div>
+    <div class="pronto-window">
+      <div class="pronto-titlebar-bar">
+        <div class="p-logo">Px</div>
+        <div class="title">Pronto Xi — RSEA - Aus Pty Ltd - TEST</div>
+        <div class="win-controls"><div class="win-btn">_</div><div class="win-btn">▢</div><div class="win-btn">✕</div></div>
+      </div>
+      <div class="pronto-tabs">
+        <div class="ptab active">Home</div>
+        <div class="ptab">Settings</div>
+        <div class="ptab">Navigation</div>
+      </div>
+      <div class="pronto-ribbon" style="height: 60px;">
+        <div class="ribbon-group">
+          <div class="ribbon-group-content">
+            <div class="ribbon-btn large"><span class="icon">📄</span>Copy</div>
+            <div class="ribbon-btn large"><span class="icon">📋</span>Paste</div>
+          </div>
+          <div class="ribbon-group-label">Clipboard</div>
+        </div>
+        <div class="ribbon-group">
+          <div class="ribbon-group-content">
+            <div class="ribbon-btn large"><span class="icon">📤</span>Export</div>
+            <div class="ribbon-btn large"><span class="icon">📑</span>Report</div>
+          </div>
+          <div class="ribbon-group-label">Data Grid Export</div>
+        </div>
+      </div>
+      <div class="pronto-body-split">
+        <div class="pronto-tree">
+          <div class="pronto-tree-header">Pronto Xi <span class="pin">📌</span> <span>✕</span></div>
+          <div class="p-tree-node expanded" style="padding-left: 6px;">
+            <div class="p-label"><span class="p-icon">📁</span>Company Selection</div>
+            <div class="p-tree-children">
+              <div class="p-tree-node expanded">
+                <div class="p-label"><span class="p-icon">🏢</span>RSEA - Aus Pty Ltd - TEST</div>
+                <div class="p-tree-children">
+                  <div class="p-tree-node expanded">
+                    <div class="p-label"><span class="p-icon">📁</span>Inventory</div>
+                    <div class="p-tree-children">
+                      <div class="p-tree-node expanded">
+                        <div class="p-label"><span class="p-icon" style="color: #ee5b25;">🅐</span>Adobe Catalogue Management</div>
+                        <div class="p-tree-children">
+                          <div class="p-tree-node leaf bold"><div class="p-label"><span class="p-icon">📄</span>Maintain Catalogues</div></div>
+                          <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📄</span>Maintain Entitlements</div></div>
+                          <div class="p-tree-node leaf"><div class="p-label"><span class="p-icon">📄</span>Maintain Uniforms</div></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="pronto-main">
+          <div class="px-dialog">
+            <div class="px-dialog-title">
+              <div class="ttl">🪟 Maintain Catalogues</div>
+              <div class="win-btn-sm">_</div><div class="win-btn-sm">▢</div><div class="win-btn-sm">✕</div>
+            </div>
+            <div class="px-dialog-tabs">
+              <div class="tab">Standard</div>
+            </div>
+            <div class="px-grid">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Catalogue</th>
+                    <th>Description</th>
+                    <th>Debtor</th>
+                    <th>Name</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Created By</th>
+                    <th>Created</th>
+                  </tr>
+                </thead>
+                <tbody id="s2-tbody">
+                  <tr><td>BBP-FT</td><td>BBP Full Time Wardrobe</td><td>BBPCONST</td><td>BBP Constructions</td><td>Employee</td><td>Active</td><td>johnh</td><td>03-FEB-2026</td></tr>
+                  <tr><td>BBP-PT</td><td>BBP Part Time Wardrobe</td><td>BBPCONST</td><td>BBP Constructions</td><td>Employee</td><td>Active</td><td>johnh</td><td>03-FEB-2026</td></tr>
+                  <tr><td>SMITHCO</td><td>Smith &amp; Co General</td><td>SMITHCO</td><td>Smith &amp; Co</td><td>ALL</td><td>Active</td><td>johns</td><td>21-JAN-2026</td></tr>
+                  <tr><td>RSEA-RAIL</td><td>RSEA Rail Workers</td><td>RSEACORP</td><td>RSEA Corp Rail Division</td><td>RailCrew</td><td>Active</td><td>johnh</td><td>14-JAN-2026</td></tr>
+                  <tr><td>ACME-SAFE</td><td>Acme Site Safety</td><td>ACMEIND</td><td>Acme Industrial</td><td>SiteOps</td><td>Active</td><td>johns</td><td>11-JAN-2026</td></tr>
+                  <tr><td>BLUECITY</td><td>Blue City Cleaners</td><td>BLUECITY</td><td>Blue City Cleaners P/L</td><td>Cleaner</td><td>Inactive</td><td>johns</td><td>03-DEC-2025</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="px-status-spacer"></div>
+            <div class="px-actions">
+              <a id="s2-find"><u>F</u>ind</a>
+              <a class="primary" id="s2-entry"><u>E</u>ntry</a>
+              <a><u>C</u>orrect</a>
+              <a><u>R</u>emove</a>
+              <a>S<u>t</u>atus</a>
+              <a>L<u>i</u>nes</a>
+              <a>C<u>o</u>py</a>
+              <a id="s2-users"><u>U</u>sers</a>
+              <a><u>A</u>udit</a>
+              <a id="s2-categories">Cate<u>g</u>ories</a>
+            </div>
+
+            <div class="entry-dialog" id="s2-entry-dialog">
+              <div class="ed-title">New Catalogue</div>
+              <div class="ed-body">
+                <div class="ed-row"><div class="ed-label">Catalogue ID:</div><input class="ed-input readonly" id="s2-ed-id" value="(auto-assigned)" readonly></div>
+                <div class="ed-row"><div class="ed-label">Description:</div><input class="ed-input" id="s2-ed-desc"></div>
+                <div class="ed-row"><div class="ed-label">Debtor:</div><input class="ed-input" id="s2-ed-debtor"></div>
+                <div class="ed-row"><div class="ed-label">Role:</div><input class="ed-input" id="s2-ed-role"></div>
+              </div>
+              <div class="ed-footer">
+                <button class="ed-btn" id="s2-ed-ok">OK</button>
+                <button class="ed-btn">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cursor" id="cursor2"></div>
+    <div class="caption-strip">
+      <div class="caption-step" id="s2-step">STEP 2 — Create Catalogue</div>
+      <div class="caption-text" id="s2-caption">The <strong>Maintain Catalogues</strong> datagrid lists every catalogue with its debtor, role and status. Use <strong>Entry</strong> to create a new catalogue — prompt for Description, Debtor and Role; the Catalogue ID auto-assigns. Created-by and Created-date populate automatically.</div>
+    </div>
+  </div>
+
+
+  <!-- ============================================================ -->
+  <!-- SCENE 3: Categories drill-down -->
+  <!-- ============================================================ -->
+  <div class="scene" data-scene="3">
+    <div class="scene-title"><strong>SCENE 4</strong> &nbsp;·&nbsp; Catalogue Categories — 3-Level Hierarchy</div>
+
+    <div class="pronto-window">
+      <div class="pronto-titlebar-bar">
+        <div class="p-logo">Px</div>
+        <div class="title">Pronto Xi — RSEA - Aus Pty Ltd - TEST</div>
+        <div class="win-controls"><div class="win-btn">_</div><div class="win-btn">▢</div><div class="win-btn">✕</div></div>
+      </div>
+      <div class="pronto-tabs">
+        <div class="ptab active">Home</div>
+        <div class="ptab">Settings</div>
+        <div class="ptab">Navigation</div>
+      </div>
+      <div class="pronto-ribbon" style="height: 60px;">
+        <div class="ribbon-group">
+          <div class="ribbon-group-content">
+            <div class="ribbon-btn large"><span class="icon">📄</span>Copy</div>
+            <div class="ribbon-btn large"><span class="icon">📋</span>Paste</div>
+          </div>
+          <div class="ribbon-group-label">Clipboard</div>
+        </div>
+        <div class="ribbon-group">
+          <div class="ribbon-group-content">
+            <div class="ribbon-btn large"><span class="icon">📤</span>Export</div>
+            <div class="ribbon-btn large"><span class="icon">📑</span>Report</div>
+          </div>
+          <div class="ribbon-group-label">Data Grid Export</div>
+        </div>
+      </div>
+      <div class="pronto-body-split">
+        <div class="pronto-tree">
+          <div class="pronto-tree-header">Pronto Xi <span class="pin">📌</span> <span>✕</span></div>
+          <div class="p-tree-node expanded" style="padding-left: 6px;">
+            <div class="p-label"><span class="p-icon">📁</span>Company Selection</div>
+            <div class="p-tree-children">
+              <div class="p-tree-node expanded">
+                <div class="p-label"><span class="p-icon">🏢</span>RSEA - Aus Pty Ltd - TEST</div>
+                <div class="p-tree-children">
+                  <div class="p-tree-node expanded">
+                    <div class="p-label"><span class="p-icon">📁</span>Inventory</div>
+                    <div class="p-tree-children">
+                      <div class="p-tree-node expanded">
+                        <div class="p-label"><span class="p-icon" style="color: #ee5b25;">🅐</span>Adobe Catalogue Management</div>
+                        <div class="p-tree-children">
+                          <div class="p-tree-node leaf bold"><div class="p-label"><span class="p-icon">📄</span>Maintain Catalogues</div></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="pronto-main">
+          <!-- Intro dialog: Maintain Catalogues source screen -->
+          <div class="px-dialog intro-dialog" id="s3-intro">
+            <div class="px-dialog-title">
+              <span class="intro-from-tag">From</span>
+              <div class="ttl">🪟 Maintain Catalogues — Catalogue: <span style="font-family: 'Consolas', monospace;">KONEALEX-WW</span> selected</div>
+              <div class="win-btn-sm">_</div><div class="win-btn-sm">▢</div><div class="win-btn-sm">✕</div>
+            </div>
+            <div class="px-dialog-tabs"><div class="tab">Standard</div></div>
+            <div class="px-grid">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Catalogue</th><th>Description</th><th>Debtor</th><th>Name</th>
+                    <th>Role</th><th>Status</th><th>Created By</th><th>Created</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="highlight"><td>KONEALEX-WW</td><td>KONE Workwear Catalogue</td><td>KONEALEX</td><td>KONE Elevators Australia</td><td>Employee</td><td>Active</td><td>johnh</td><td>13-MAY-2026</td></tr>
+                  <tr><td>BBP-FT</td><td>BBP Full Time Wardrobe</td><td>BBPCONST</td><td>BBP Constructions</td><td>Employee</td><td>Active</td><td>johnh</td><td>03-FEB-2026</td></tr>
+                  <tr><td>BBP-PT</td><td>BBP Part Time Wardrobe</td><td>BBPCONST</td><td>BBP Constructions</td><td>Employee</td><td>Active</td><td>johnh</td><td>03-FEB-2026</td></tr>
+                  <tr><td>SMITHCO</td><td>Smith &amp; Co General</td><td>SMITHCO</td><td>Smith &amp; Co</td><td>ALL</td><td>Active</td><td>johns</td><td>21-JAN-2026</td></tr>
+                  <tr><td>RSEA-RAIL</td><td>RSEA Rail Workers</td><td>RSEACORP</td><td>RSEA Corp Rail Division</td><td>RailCrew</td><td>Active</td><td>johnh</td><td>14-JAN-2026</td></tr>
+                  <tr><td>ACME-SAFE</td><td>Acme Site Safety</td><td>ACMEIND</td><td>Acme Industrial</td><td>SiteOps</td><td>Active</td><td>johns</td><td>11-JAN-2026</td></tr>
+                  <tr><td>BLUECITY</td><td>Blue City Cleaners</td><td>BLUECITY</td><td>Blue City Cleaners P/L</td><td>Cleaner</td><td>Inactive</td><td>johns</td><td>03-DEC-2025</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="px-status-spacer"></div>
+            <div class="px-actions">
+              <a><u>F</u>ind</a>
+              <a><u>E</u>ntry</a>
+              <a><u>C</u>orrect</a>
+              <a><u>R</u>emove</a>
+              <a>S<u>t</u>atus</a>
+              <a>L<u>i</u>nes</a>
+              <a>C<u>o</u>py</a>
+              <a><u>U</u>sers</a>
+              <a><u>A</u>udit</a>
+              <a class="intro-dialog-pulse" id="s3-intro-cat-btn">Cate<u>g</u>ories</a>
+            </div>
+          </div>
+
+          <div class="px-dialog">
+            <div class="px-dialog-title">
+              <div class="ttl">🪟 Catalogue Categories — KONEALEX-WW (KONE Workwear Catalogue)</div>
+              <div class="win-btn-sm">_</div><div class="win-btn-sm">▢</div><div class="win-btn-sm">✕</div>
+            </div>
+            <div class="px-dialog-tabs"><div class="tab">Standard</div></div>
+            <div class="px-grid">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Category L1</th>
+                    <th>L1 Description</th>
+                    <th>Category L2</th>
+                    <th>L2 Description</th>
+                    <th>Category L3</th>
+                    <th>L3 Description</th>
+                  </tr>
+                </thead>
+                <tbody id="s3-tbody"></tbody>
+              </table>
+            </div>
+            <div class="px-status-spacer"></div>
+            <div class="px-actions">
+              <a><u>F</u>ind</a>
+              <a class="primary" id="s3-entry"><u>E</u>ntry</a>
+              <a><u>C</u>orrect</a>
+              <a><u>R</u>emove</a>
+              <a id="s3-lines">L<u>i</u>nes</a>
+              <a>‹ Back to Catalogue</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cursor" id="cursor3"></div>
+    <div class="caption-strip">
+      <div class="caption-step" id="s3-step">STEP 3 — Define Hierarchy</div>
+      <div class="caption-text" id="s3-caption">With <strong>KONEALEX-WW</strong> selected on the Maintain Catalogues screen, clicking <strong>Categories</strong> opens the 3-level hierarchy grid for this catalogue. Levels 1 &amp; 2 are mandatory, Level 3 is optional. Duplicate values across rows are allowed — e.g. <em>SHIRTS</em> can sit under both <em>Workwear</em> and <em>Hi-Vis</em>.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SCENE 4: Catalogue Lines - add products incl. style-based entry -->
+  <!-- ============================================================ -->
+  <div class="scene" data-scene="4">
+    <div class="scene-title"><strong>SCENE 5</strong> &nbsp;·&nbsp; Catalogue Lines — Assign Products</div>
+
+    <div class="pronto-window">
+      <div class="pronto-titlebar-bar">
+        <div class="p-logo">Px</div>
+        <div class="title">Pronto Xi — RSEA - Aus Pty Ltd - TEST</div>
+        <div class="win-controls"><div class="win-btn">_</div><div class="win-btn">▢</div><div class="win-btn">✕</div></div>
+      </div>
+      <div class="pronto-tabs">
+        <div class="ptab active">Home</div>
+        <div class="ptab">Settings</div>
+      </div>
+      <div class="pronto-ribbon" style="height: 60px;">
+        <div class="ribbon-group">
+          <div class="ribbon-group-content">
+            <div class="ribbon-btn large"><span class="icon">📄</span>Copy</div>
+            <div class="ribbon-btn large"><span class="icon">📋</span>Paste</div>
+          </div>
+          <div class="ribbon-group-label">Clipboard</div>
+        </div>
+      </div>
+      <div class="pronto-body-split">
+        <div class="pronto-tree">
+          <div class="pronto-tree-header">Pronto Xi <span class="pin">📌</span> <span>✕</span></div>
+          <div class="p-tree-node expanded" style="padding-left: 6px;">
+            <div class="p-label"><span class="p-icon">📁</span>Company Selection</div>
+            <div class="p-tree-children">
+              <div class="p-tree-node expanded">
+                <div class="p-label"><span class="p-icon">🏢</span>RSEA - Aus Pty Ltd - TEST</div>
+                <div class="p-tree-children">
+                  <div class="p-tree-node expanded">
+                    <div class="p-label"><span class="p-icon">📁</span>Inventory</div>
+                    <div class="p-tree-children">
+                      <div class="p-tree-node expanded">
+                        <div class="p-label"><span class="p-icon" style="color: #ee5b25;">🅐</span>Adobe Catalogue Management</div>
+                        <div class="p-tree-children">
+                          <div class="p-tree-node leaf bold"><div class="p-label"><span class="p-icon">📄</span>Maintain Catalogues</div></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="pronto-main">
+          <!-- Intro dialog: Categories source screen -->
+          <div class="px-dialog intro-dialog" id="s4-intro">
+            <div class="px-dialog-title">
+              <span class="intro-from-tag">From</span>
+              <div class="ttl">🪟 Catalogue Categories — KONEALEX-WW (KONE Workwear Catalogue)</div>
+              <div class="win-btn-sm">_</div><div class="win-btn-sm">▢</div><div class="win-btn-sm">✕</div>
+            </div>
+            <div class="px-dialog-tabs"><div class="tab">Standard</div></div>
+            <div class="px-grid">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Category L1</th><th>L1 Description</th>
+                    <th>Category L2</th><th>L2 Description</th>
+                    <th>Category L3</th><th>L3 Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="highlight"><td>WW</td><td>Workwear</td><td>SH</td><td>Shirts</td><td>M</td><td>Male</td></tr>
+                  <tr><td>WW</td><td>Workwear</td><td>SH</td><td>Shirts</td><td>F</td><td>Female</td></tr>
+                  <tr><td>WW</td><td>Workwear</td><td>PT</td><td>Pants</td><td>—</td><td>—</td></tr>
+                  <tr><td>WW</td><td>Workwear</td><td>JACK</td><td>Jackets</td><td>—</td><td>—</td></tr>
+                  <tr><td>HV</td><td>Hi-Vis</td><td>SH</td><td>Shirts</td><td>—</td><td>—</td></tr>
+                  <tr><td>PPE</td><td>PPE</td><td>BOOT</td><td>Boots</td><td>—</td><td>—</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="px-status-spacer"></div>
+            <div class="px-actions">
+              <a><u>F</u>ind</a>
+              <a><u>E</u>ntry</a>
+              <a><u>C</u>orrect</a>
+              <a><u>R</u>emove</a>
+              <a class="intro-dialog-pulse" id="s4-intro-lines-btn">L<u>i</u>nes</a>
+              <a>‹ Back to Catalogue</a>
+            </div>
+          </div>
+
+          <div class="px-dialog">
+            <div class="px-dialog-title">
+              <div class="ttl">🪟 Catalogue Lines — KONEALEX-WW (KONE Workwear Catalogue)</div>
+              <div class="win-btn-sm">_</div><div class="win-btn-sm">▢</div><div class="win-btn-sm">✕</div>
+            </div>
+            <div class="px-dialog-tabs"><div class="tab">Standard</div></div>
+            <div class="px-grid">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Stock Code</th>
+                    <th>Style</th>
+                    <th>Description</th>
+                    <th>Cat 1</th>
+                    <th>Cat 2</th>
+                    <th>Cat 3</th>
+                    <th>SKU Count</th>
+                  </tr>
+                </thead>
+                <tbody id="s4-tbody"></tbody>
+              </table>
+            </div>
+            <div class="px-status-spacer"></div>
+            <div class="px-actions">
+              <a><u>F</u>ind</a>
+              <a class="primary" id="s4-entry"><u>E</u>ntry</a>
+              <a><u>C</u>orrect</a>
+              <a><u>R</u>emove</a>
+              <a>Bulk Remove</a>
+              <a>Bulk Add</a>
+              <a>‹ Back to Catalogue</a>
+            </div>
+
+            <div class="entry-dialog" id="s4-entry-dialog">
+              <div class="ed-title">Catalogue Line — Entry</div>
+              <div class="ed-body">
+                <div class="ed-row"><div class="ed-label">Stock Code:</div><input class="ed-input" id="s4-ed-stock" placeholder="(leave blank for style entry)"></div>
+                <div class="ed-row"><div class="ed-label">Style:</div><input class="ed-input" id="s4-ed-style"></div>
+                <div class="ed-row"><div class="ed-label">Category L1:</div><input class="ed-input" id="s4-ed-cat1"></div>
+                <div class="ed-row"><div class="ed-label">Category L2:</div><input class="ed-input" id="s4-ed-cat2"></div>
+                <div class="ed-row"><div class="ed-label">Category L3:</div><input class="ed-input" id="s4-ed-cat3"></div>
+              </div>
+              <div class="ed-footer">
+                <button class="ed-btn" id="s4-ed-ok">OK</button>
+                <button class="ed-btn">Cancel</button>
+              </div>
+            </div>
+
+            <div class="sku-popup" id="s4-sku-popup">
+              <div class="sp-title">Select SKUs for Style E1310</div>
+              <div class="sp-body">
+                <div class="sp-info">
+                  Style <strong>E1310</strong> — <em>ELEVEN Workwear Stretch Drill Work Pant</em><br>
+                  Tick which colour/size variants should be included in this catalogue.
+                </div>
+                <table>
+                  <thead>
+                    <tr><th style="width: 40px;"></th><th>SKU</th><th>Description</th><th>Colour</th></tr>
+                  </thead>
+                  <tbody id="s4-sku-tbody">
+                    <tr id="s4-sku-r1"><td><input type="checkbox"></td><td>E1310ST_BLCK</td><td>ELEVEN Stretch Drill Pant - Black</td><td>BLCK</td></tr>
+                    <tr id="s4-sku-r2"><td><input type="checkbox"></td><td>E1310ST_ORNY</td><td>ELEVEN Stretch Drill Pant - Orange/Navy</td><td>ORNY</td></tr>
+                    <tr id="s4-sku-r3"><td><input type="checkbox"></td><td>E1310ST_YENY</td><td>ELEVEN Stretch Drill Pant - Yellow/Navy</td><td>YENY</td></tr>
+                    <tr id="s4-sku-r4"><td><input type="checkbox"></td><td>E1310ST_NAVY</td><td>ELEVEN Stretch Drill Pant - Navy</td><td>NAVY</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="sp-footer">
+                <button class="ed-btn" id="s4-sku-ok">OK</button>
+                <button class="ed-btn">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cursor" id="cursor4"></div>
+    <div class="caption-strip">
+      <div class="caption-step" id="s4-step">STEP 4 — Add Products</div>
+      <div class="caption-text" id="s4-caption">Clicking <strong>Lines</strong> from the Categories screen opens the product-assignment grid. Each line ties a stock code (or a style, which expands to multiple SKUs) to a category path. Leaving Stock Code blank prompts for a Style — the system then asks which colour/size variants to include. Each tick adds a row to <em>zcus-catalogue-line-stock</em>.</div>
+    </div>
+  </div>
+
+
+  <!-- ============================================================ -->
+  <!-- SCENE 5: Users drill-down (read-only) -->
+  <!-- ============================================================ -->
+  <div class="scene" data-scene="5">
+    <div class="scene-title"><strong>SCENE 6</strong> &nbsp;·&nbsp; Users — Who Can Purchase Under This Catalogue</div>
+
+    <div class="pronto-window">
+      <div class="pronto-titlebar-bar">
+        <div class="p-logo">Px</div>
+        <div class="title">Pronto Xi — RSEA - Aus Pty Ltd - TEST</div>
+        <div class="win-controls"><div class="win-btn">_</div><div class="win-btn">▢</div><div class="win-btn">✕</div></div>
+      </div>
+      <div class="pronto-tabs">
+        <div class="ptab active">Home</div>
+      </div>
+      <div class="pronto-ribbon" style="height: 60px;">
+        <div class="ribbon-group">
+          <div class="ribbon-group-content">
+            <div class="ribbon-btn large"><span class="icon">📄</span>Copy</div>
+          </div>
+          <div class="ribbon-group-label">Clipboard</div>
+        </div>
+      </div>
+      <div class="pronto-body-split">
+        <div class="pronto-tree">
+          <div class="pronto-tree-header">Pronto Xi <span class="pin">📌</span> <span>✕</span></div>
+          <div class="p-tree-node expanded" style="padding-left: 6px;">
+            <div class="p-label"><span class="p-icon">📁</span>Company Selection</div>
+            <div class="p-tree-children">
+              <div class="p-tree-node expanded">
+                <div class="p-label"><span class="p-icon">🏢</span>RSEA - Aus Pty Ltd - TEST</div>
+                <div class="p-tree-children">
+                  <div class="p-tree-node expanded">
+                    <div class="p-label"><span class="p-icon">📁</span>Inventory</div>
+                    <div class="p-tree-children">
+                      <div class="p-tree-node expanded">
+                        <div class="p-label"><span class="p-icon" style="color: #ee5b25;">🅐</span>Adobe Catalogue Management</div>
+                        <div class="p-tree-children">
+                          <div class="p-tree-node leaf bold"><div class="p-label"><span class="p-icon">📄</span>Maintain Catalogues</div></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="pronto-main">
+          <!-- Intro dialog: Maintain Catalogues source screen (Users is reached from the catalogue header) -->
+          <div class="px-dialog intro-dialog" id="s5-intro">
+            <div class="px-dialog-title">
+              <span class="intro-from-tag">From</span>
+              <div class="ttl">🪟 Maintain Catalogues — Catalogue: <span style="font-family: 'Consolas', monospace;">KONEALEX-WW</span> selected</div>
+              <div class="win-btn-sm">_</div><div class="win-btn-sm">▢</div><div class="win-btn-sm">✕</div>
+            </div>
+            <div class="px-dialog-tabs"><div class="tab">Standard</div></div>
+            <div class="px-grid">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Catalogue</th><th>Description</th><th>Debtor</th><th>Name</th>
+                    <th>Role</th><th>Status</th><th>Created By</th><th>Created</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="highlight"><td>KONEALEX-WW</td><td>KONE Workwear Catalogue</td><td>KONEALEX</td><td>KONE Elevators Australia</td><td>Employee</td><td>Active</td><td>johnh</td><td>13-MAY-2026</td></tr>
+                  <tr><td>BBP-FT</td><td>BBP Full Time Wardrobe</td><td>BBPCONST</td><td>BBP Constructions</td><td>Employee</td><td>Active</td><td>johnh</td><td>03-FEB-2026</td></tr>
+                  <tr><td>BBP-PT</td><td>BBP Part Time Wardrobe</td><td>BBPCONST</td><td>BBP Constructions</td><td>Employee</td><td>Active</td><td>johnh</td><td>03-FEB-2026</td></tr>
+                  <tr><td>SMITHCO</td><td>Smith &amp; Co General</td><td>SMITHCO</td><td>Smith &amp; Co</td><td>ALL</td><td>Active</td><td>johns</td><td>21-JAN-2026</td></tr>
+                  <tr><td>RSEA-RAIL</td><td>RSEA Rail Workers</td><td>RSEACORP</td><td>RSEA Corp Rail Division</td><td>RailCrew</td><td>Active</td><td>johnh</td><td>14-JAN-2026</td></tr>
+                  <tr><td>ACME-SAFE</td><td>Acme Site Safety</td><td>ACMEIND</td><td>Acme Industrial</td><td>SiteOps</td><td>Active</td><td>johns</td><td>11-JAN-2026</td></tr>
+                  <tr><td>BLUECITY</td><td>Blue City Cleaners</td><td>BLUECITY</td><td>Blue City Cleaners P/L</td><td>Cleaner</td><td>Inactive</td><td>johns</td><td>03-DEC-2025</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="px-status-spacer"></div>
+            <div class="px-actions">
+              <a><u>F</u>ind</a>
+              <a><u>E</u>ntry</a>
+              <a><u>C</u>orrect</a>
+              <a><u>R</u>emove</a>
+              <a>S<u>t</u>atus</a>
+              <a>L<u>i</u>nes</a>
+              <a>C<u>o</u>py</a>
+              <a class="intro-dialog-pulse" id="s5-intro-users-btn"><u>U</u>sers</a>
+              <a><u>A</u>udit</a>
+              <a>Cate<u>g</u>ories</a>
+            </div>
+          </div>
+
+          <div class="px-dialog">
+            <div class="px-dialog-title">
+              <div class="ttl">🪟 Users — KONEALEX-WW (KONE Workwear Catalogue) &nbsp;·&nbsp; READ-ONLY</div>
+              <div class="win-btn-sm">_</div><div class="win-btn-sm">▢</div><div class="win-btn-sm">✕</div>
+            </div>
+            <div class="px-dialog-tabs"><div class="tab">Standard</div></div>
+            <div style="padding: 8px 12px; background: #fff8e1; border-bottom: 1px solid #f0d9a0; font-size: 11px; color: #6a4a00; font-style: italic;">
+              ⚠ This view is read-only — data is sourced from Adobe Commerce via the <code>zcus-ecommerce-user</code> sync table.
+            </div>
+            <div class="px-grid">
+              <table>
+                <thead>
+                  <tr>
+                    <th>User ID</th>
+                    <th>First Name</th>
+                    <th>Surname</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Emp. Status</th>
+                  </tr>
+                </thead>
+                <tbody id="s5-tbody"></tbody>
+              </table>
+            </div>
+            <div class="px-status-spacer"></div>
+            <div class="px-actions">
+              <a class="primary"><u>F</u>ind</a>
+              <a>‹ Back to Catalogue</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cursor" id="cursor5"></div>
+    <div class="caption-strip">
+      <div class="caption-step" id="s5-step">STEP 5 — Users</div>
+      <div class="caption-text" id="s5-caption">From the catalogue header, clicking <strong>Users</strong> opens a read-only list of everyone with the matching debtor and role. Adobe Commerce is the master for users (via the <em>zcus-ecommerce-user</em> table) — this gives Pronto operators a visibility check: who's about to see and order from this catalogue.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SCENE 6: Transition Pronto → Adobe Commerce -->
+  <!-- ============================================================ -->
+  <div class="scene" data-scene="6">
+    <div class="scene-title"><strong>SCENE 7</strong> &nbsp;·&nbsp; Hand-off — Pronto Xi → Adobe Commerce</div>
+    <div class="transition-stage" id="s6-stage">
+      <div class="trans-row">
+        <div class="trans-panel pronto" id="s6-pronto">
+          <div class="tp-header">Pronto Xi</div>
+          <div class="tp-icon">📋</div>
+          <div class="tp-title">Catalogue Defined</div>
+          <div class="tp-sub">KONEALEX-WW<br>3-level hierarchy<br>+ catalogue lines</div>
+        </div>
+        <div class="trans-flow-arrow"></div>
+        <div class="trans-panel adobe" id="s6-adobe">
+          <div class="tp-header">Adobe Commerce</div>
+          <div class="tp-icon">🅐</div>
+          <div class="tp-title">Catalogue Receive</div>
+          <div class="tp-sub">Categories + product<br>assignments sync<br>via API integration</div>
+        </div>
+      </div>
+      <div class="csv-packet" id="s6-packet-1" style="opacity: 0;">zcus-catalogue-header</div>
+      <div class="csv-packet" id="s6-packet-2" style="opacity: 0;">zcus-catalogue-categories</div>
+      <div class="csv-packet" id="s6-packet-3" style="opacity: 0;">zcus-catalogue-lines</div>
+      <div class="csv-packet" id="s6-packet-4" style="opacity: 0;">zcus-catalogue-line-stock</div>
+    </div>
+    <div class="caption-strip">
+      <div class="caption-step" id="s6-step">TRANSITION</div>
+      <div class="caption-text" id="s6-caption">In the future-state model, Pronto Xi is the master. Four custom objects push to Adobe Commerce via the integration: the catalogue header, category hierarchy, line definitions, and the exploded SKU-level stock records. Note the direction is reversed from the current Commerce Vision flow.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SCENE 7: Adobe Commerce admin placeholder -->
+  <!-- ============================================================ -->
+  <div class="scene" data-scene="7">
+    <div class="scene-title"><strong>SCENE 8</strong> &nbsp;·&nbsp; Adobe Commerce — Custom Categories Admin</div>
+    <div class="adobe-window">
+      <div class="ac-sidebar">
+        <div class="ac-logo">🅐</div>
+        <div class="ac-nav">
+          <div class="ac-nav-item"><div class="ac-nav-icon">📊</div>Dashboard</div>
+          <div class="ac-nav-item"><div class="ac-nav-icon">💵</div>Sales</div>
+          <div class="ac-nav-item"><div class="ac-nav-icon">⚙</div>Admin Action Log</div>
+          <div class="ac-nav-item active"><div class="ac-nav-icon">📁</div>Catalog</div>
+          <div class="ac-nav-item"><div class="ac-nav-icon">👥</div>Customers</div>
+          <div class="ac-nav-item"><div class="ac-nav-icon">📣</div>Marketing</div>
+          <div class="ac-nav-item"><div class="ac-nav-icon">📄</div>Content</div>
+          <div class="ac-nav-item"><div class="ac-nav-icon">📈</div>Reports</div>
+          <div class="ac-nav-item"><div class="ac-nav-icon">🏬</div>Stores</div>
+          <div class="ac-nav-item"><div class="ac-nav-icon">🖥</div>System</div>
+        </div>
+      </div>
+      <div class="ac-main">
+        <div class="ac-screen-stack">
+
+        <!-- Screen 1: Categories grid (initial view) -->
+        <div class="ac-screen layered" id="s7-grid-screen">
+        <div class="ac-topbar">
+          <div class="ac-page-title">Categories</div>
+          <div class="ac-icon">🔍</div>
+          <div class="ac-icon">🔔<span class="ac-badge">3</span></div>
+          <div class="ac-user">👤 tonyt ▾</div>
+        </div>
+        <div class="ac-add-btn-bar">
+          <button class="ac-add-btn">Add Category <span class="ac-add-caret">▾</span></button>
+        </div>
+        <div class="ac-toolbar">
+          <div class="ac-filter-btn">▼ Filters</div>
+          <div class="ac-view-btn">👁 Default View ▾</div>
+          <div class="ac-columns-btn">⚙ Columns ▾</div>
+        </div>
+        <div class="ac-toolbar">
+          <div class="ac-search-box"><span class="magnifier">🔍</span>Search by keyword</div>
+          <select class="ac-action-select"><option>Actions</option></select>
+          <div class="ac-records" id="s7-records">8 records found</div>
+          <div class="ac-toolbar-right">
+            <select class="ac-page-select"><option>200</option></select>
+            <span style="font-size: 12px; color: #555;">per page</span>
+            <div class="ac-page-controls">
+              <button class="ac-page-btn">‹</button>
+              <input value="1" readonly>
+              <span>of 1</span>
+              <button class="ac-page-btn">›</button>
+            </div>
+          </div>
+        </div>
+        <div class="ac-grid-wrap">
+          <table class="ac-grid">
+            <thead>
+              <tr>
+                <th style="width: 36px;"><input type="checkbox"></th>
+                <th>ID <span class="sort">↓</span></th>
+                <th>Thumbnail</th>
+                <th>Name</th>
+                <th>Catalog</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="s7-tbody">
+              <tr><td><input type="checkbox"></td><td>10</td><td><div class="ac-thumb">👔</div></td><td>Workwear</td><td><span class="catalog-pill scoped">Shell Employee Catalog</span></td><td><a class="ac-edit-link ac-edit-pulse" id="s7-edit-workwear">Edit</a></td></tr>
+              <tr><td><input type="checkbox"></td><td>11</td><td><div class="ac-thumb">🧢</div></td><td>Hats</td><td><span class="catalog-pill scoped">Shell Employee Catalog</span></td><td><a class="ac-edit-link">Edit</a></td></tr>
+              <tr><td><input type="checkbox"></td><td>12</td><td><div class="ac-thumb">👕</div></td><td>Polo Shirts</td><td><span class="catalog-pill scoped">Shell Employee Catalog</span></td><td><a class="ac-edit-link">Edit</a></td></tr>
+              <tr><td><input type="checkbox"></td><td>20</td><td><div class="ac-thumb">⛑</div></td><td>Safety Equipment</td><td><span class="catalog-pill scoped-blue">BHP Manager Catalog</span></td><td><a class="ac-edit-link">Edit</a></td></tr>
+              <tr><td><input type="checkbox"></td><td>21</td><td><div class="ac-thumb">🦺</div></td><td>Hi-Vis Vests</td><td><span class="catalog-pill scoped-blue">BHP Manager Catalog</span></td><td><a class="ac-edit-link">Edit</a></td></tr>
+              <tr><td><input type="checkbox"></td><td>22</td><td><div class="ac-thumb">⛑</div></td><td>Hard Hats</td><td><span class="catalog-pill scoped-blue">BHP Manager Catalog</span></td><td><a class="ac-edit-link">Edit</a></td></tr>
+              <tr><td><input type="checkbox"></td><td>30</td><td><div class="ac-thumb">📦</div></td><td>General Merchandise</td><td><span class="catalog-pill global">global</span></td><td><a class="ac-edit-link">Edit</a></td></tr>
+              <tr><td><input type="checkbox"></td><td>40</td><td><div class="ac-thumb">🎽</div></td><td>Branded Apparel</td><td><span class="catalog-pill scoped-green">KFC Office Catalog</span></td><td><a class="ac-edit-link">Edit</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+        </div>
+
+        <!-- Screen 2: Category edit page (revealed after Edit click) -->
+        <div class="ac-screen layered fading" id="s7-edit-screen">
+          <div class="ac-edit-header">
+            <div class="ac-edit-title"><span class="ac-edit-title-prefix">Global:</span> Workwear</div>
+            <div class="ac-icon">🔍</div>
+            <div class="ac-icon">🔔<span class="ac-badge">3</span></div>
+            <div class="ac-user">👤 tonyt ▾</div>
+          </div>
+          <div class="ac-edit-tabs">
+            <div class="ac-edit-tab active">Currently Active</div>
+          </div>
+          <div class="ac-edit-body" id="s7-edit-body">
+
+            <!-- Enable Category toggle (no section wrapper, sits at top) -->
+            <div class="ac-edit-section" style="border-bottom: 1px solid #e0e0e0;">
+              <div class="ac-form-row">
+                <div class="ac-form-label">
+                  Enable Category
+                  <span class="scope-hint">[store view]</span>
+                </div>
+                <div class="ac-form-value">
+                  <div class="ac-toggle" id="s7-enable-toggle">
+                    <div class="ac-toggle-track"><div class="ac-toggle-thumb"></div></div>
+                    <span class="ac-toggle-label" id="s7-toggle-label">No</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Content section -->
+            <div class="ac-edit-section" id="s7-content-section">
+              <div class="ac-edit-section-header">
+                <span>Content</span>
+                <span class="ac-collapse-toggle">⌃</span>
+              </div>
+              <div class="ac-edit-section-body">
+                <div class="ac-form-row">
+                  <div class="ac-form-label">
+                    Category Image
+                    <span class="scope-hint">[store view]</span>
+                  </div>
+                  <div class="ac-form-value">
+                    <div class="ac-upload-row">
+                      <button class="ac-btn-secondary" id="s7-upload-btn">Upload</button>
+                      <button class="ac-btn-secondary">Select from Gallery</button>
+                    </div>
+                    <div class="ac-upload-hint">Maximum file size: 4 MB. Allowed file types: JPG, GIF, PNG.</div>
+                    <div class="ac-image-drop" id="s7-image-drop">
+                      <div class="upload-placeholder" style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                        <div class="camera-icon">📷</div>
+                        <div class="drop-hint">Browse to find or<br>drag image here</div>
+                      </div>
+                      <div class="preview">
+                        <div class="preview-img">
+                          <svg viewBox="0 0 100 100">
+                            <!-- Stylised workwear jacket icon -->
+                            <path d="M 30 25 L 50 18 L 70 25 L 75 35 L 85 40 L 80 80 L 20 80 L 15 40 L 25 35 Z"
+                                  fill="#ffffff" stroke="#fff" stroke-width="1" opacity="0.9"/>
+                            <path d="M 45 18 L 50 28 L 55 18" fill="none" stroke="#c4341c" stroke-width="2"/>
+                            <rect x="46" y="40" width="8" height="30" fill="#c4341c"/>
+                            <circle cx="50" cy="46" r="1.5" fill="#fff"/>
+                            <circle cx="50" cy="55" r="1.5" fill="#fff"/>
+                            <circle cx="50" cy="64" r="1.5" fill="#fff"/>
+                          </svg>
+                        </div>
+                        <span class="preview-name">workwear-hero.jpg</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="ac-form-row">
+                  <div class="ac-form-label">
+                    Description
+                    <span class="scope-hint">[store view]</span>
+                  </div>
+                  <div class="ac-form-value">
+                    <div style="display: flex; justify-content: flex-end; margin-bottom: 8px;">
+                      <button class="ac-pagebuilder-btn">📝 Edit with Page Builder</button>
+                    </div>
+                    <div class="ac-description-area">
+                      <div class="hand-icon">✋</div>
+                      Drag Row, Columns, Tabs, Block, Dynamic Block or HTML Code here
+                    </div>
+                    <div style="font-size: 10px; color: #888; margin-top: 8px;">Note: Keyboard shortcut to activate editor help : Alt + 0 (Windows) or ^0 (MacOS)</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- SEO section -->
+            <div class="ac-edit-section" id="s7-seo-section">
+              <div class="ac-edit-section-header">
+                <span>Search Engine Optimization</span>
+                <span class="ac-collapse-toggle">⌃</span>
+              </div>
+              <div class="ac-edit-section-body">
+                <div class="ac-form-row">
+                  <div class="ac-form-label">
+                    URL Key
+                    <span class="scope-hint">[store view]</span>
+                  </div>
+                  <div class="ac-form-value">
+                    <input class="ac-form-input" id="s7-seo-url" placeholder="">
+                    <label style="font-size: 12px; color: #303030; display: flex; align-items: center; gap: 6px; margin-top: 6px;">
+                      <input type="checkbox" style="margin: 0;">
+                      Create Permanent Redirect for old URL
+                    </label>
+                  </div>
+                </div>
+                <div class="ac-form-row">
+                  <div class="ac-form-label">
+                    Meta Title
+                    <span class="scope-hint">[store view]</span>
+                  </div>
+                  <div class="ac-form-value">
+                    <input class="ac-form-input" id="s7-seo-title" placeholder="">
+                  </div>
+                </div>
+                <div class="ac-form-row">
+                  <div class="ac-form-label">
+                    Meta Keywords
+                    <span class="scope-hint">[store view]</span>
+                  </div>
+                  <div class="ac-form-value">
+                    <textarea class="ac-form-input" id="s7-seo-keywords" rows="2"></textarea>
+                  </div>
+                </div>
+                <div class="ac-form-row">
+                  <div class="ac-form-label">
+                    Meta Description
+                    <span class="scope-hint">[store view]</span>
+                  </div>
+                  <div class="ac-form-value">
+                    <textarea class="ac-form-input" id="s7-seo-desc" rows="3"></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        </div>
+      </div>
+    </div>
+    <div class="cursor" id="cursor7"></div>
+    <div class="caption-strip">
+      <div class="caption-step" id="s7-step">STEP 7 — Adobe Categories</div>
+      <div class="caption-text" id="s7-caption">In Adobe Commerce, categories are managed through a <strong>custom admin grid</strong> built by Acidgreen (the native category UI was deemed unsuitable for this scale). Clicking <strong>Edit</strong> on a category opens an enrichment page where admins toggle visibility, add a hero image, and supply SEO content.</div>
+    </div>
+  </div>
+
+
+  <!-- ============================================================ -->
+  <!-- SCENE 8: Customer Storefront (reused from current animation) -->
+  <!-- ============================================================ -->
+  <div class="scene" data-scene="8">
+    <div class="scene-title"><strong>SCENE 9</strong> &nbsp;·&nbsp; Customer View — RSEA Storefront</div>
+    <div class="store-window">
+      <div class="store-browser-bar">
+        <span class="dots"><span></span><span></span><span></span></span>
+        <div class="url">🔒 rsea.com.au/catalogue/konealex-ww</div>
+      </div>
+      <div class="store-header">
+        <div class="store-logo">RSEA<small>SAFETY</small></div>
+        <div class="nav-link">Contact Us</div>
+        <div class="nav-link">Help ▾</div>
+        <div class="acct-pill">KONE ELEVATORS AUSTRALIA (KONEALEX)</div>
+        <div class="cat-pill">📂 Catalogue ▾</div>
+        <div class="cat-pill-y">KONE Workwear Catalogue</div>
+        <div class="right">
+          <div class="search-box">Product Search 🔍</div>
+          <span>👤 My Account ▾</span>
+          <span>⎋ Logout</span>
+          <span class="store-cart-pill">🛒 $0.00 (0 items)</span>
+        </div>
+      </div>
+      <div class="store-catalogue-bar">MY CATALOGUE — KONEALEX-WW</div>
+      <div class="store-body">
+        <div class="store-sidebar">
+          <div class="store-cat" id="s8-cat-ww">
+            Workwear
+            <span class="chev" id="s8-chev-ww">▸</span>
+          </div>
+          <div class="store-subcats" id="s8-subs-ww">
+            <div class="store-subcat" id="s8-sub-shirts">Shirts</div>
+            <div class="store-subcat" id="s8-sub-pants">Pants</div>
+            <div class="store-subcat" id="s8-sub-jackets">Jackets</div>
+          </div>
+          <div class="store-cat" id="s8-cat-hivis">
+            Hi-Vis
+            <span class="chev">▸</span>
+          </div>
+          <div class="store-cat" id="s8-cat-ppe">
+            PPE
+            <span class="chev">▸</span>
+          </div>
+        </div>
+        <div class="store-content" id="s8-content">
+          <div id="s8-dashboard">
+            <h1 style="font-size: 22px; font-weight: 700; margin-bottom: 4px;">📋 Welcome, KONE Elevators Australia</h1>
+            <div style="font-size: 12px; color: #888; margin-bottom: 24px;">KONE Workwear Catalogue · 3 categories · 5 products</div>
+            <div style="font-size: 13px; color: #444; max-width: 600px; line-height: 1.7;">
+              <strong>Your personalised catalogue is ready.</strong><br>
+              Browse the categories on the left to view the products available to you.
+              Items shown here reflect the catalogue, categories and product lines configured in Pronto Xi
+              and synced to Adobe Commerce. Entitlements (where applicable) will be enforced at checkout.
+            </div>
+          </div>
+          <div id="s8-products" style="display: none;">
+            <div class="store-products-bc">🏠 &gt; <span>Workwear</span> &gt; <span class="crumb-cur">Pants</span></div>
+            <div class="store-products-title">Pants</div>
+            <div class="store-products-sortbar">
+              <span>Sort:</span><span class="sort-input">Please Select... ▾</span>
+              <span style="margin-left: auto;">Showing 1 - 2 of 2</span>
+              <span>Per page</span><span class="sort-input">48 ▾</span>
+            </div>
+            <div class="store-product-row" id="s8-prod-1">
+              <div class="store-product-img">
+                <svg class="product-icon-svg" viewBox="0 0 80 80">
+                  <path d="M22 12 L58 12 L62 70 L46 70 L42 32 L38 32 L34 70 L18 70 Z" fill="#1a2a44" stroke="#0a1a30" stroke-width="1"/>
+                  <rect x="38" y="26" width="4" height="8" fill="#3a4a64"/>
+                </svg>
+              </div>
+              <div class="store-product-info">
+                <div class="star">☆</div>
+                <div class="sku">E1310ST_BLCK</div>
+                <div class="name">ELEVEN Stretch Drill Work Pant — Black</div>
+              </div>
+              <div class="store-product-selects">
+                <div class="store-select">Select Colour <span>▾</span></div>
+                <div class="store-select">Select Size <span>▾</span></div>
+              </div>
+              <div class="store-product-qty"><button>−</button><input value="0"><button>+</button></div>
+              <div>
+                <div class="store-product-price">$56.50</div>
+                <button class="store-addcart">🛒 Add to Cart</button>
+              </div>
+            </div>
+            <div class="store-product-row" id="s8-prod-2">
+              <div class="store-product-img">
+                <svg class="product-icon-svg" viewBox="0 0 80 80">
+                  <path d="M22 12 L58 12 L62 70 L46 70 L42 32 L38 32 L34 70 L18 70 Z" fill="#ff6a3a" stroke="#c24a1a" stroke-width="1"/>
+                  <rect x="22" y="50" width="36" height="4" fill="#f7e500"/>
+                  <rect x="22" y="40" width="36" height="2" fill="#f7e500"/>
+                </svg>
+              </div>
+              <div class="store-product-info">
+                <div class="star">☆</div>
+                <div class="sku">E1310ST_ORNY</div>
+                <div class="name">ELEVEN Stretch Drill Work Pant — Orange/Navy Hi-Vis</div>
+              </div>
+              <div class="store-product-selects">
+                <div class="store-select">Select Colour <span>▾</span></div>
+                <div class="store-select">Select Size <span>▾</span></div>
+              </div>
+              <div class="store-product-qty"><button>−</button><input value="0"><button>+</button></div>
+              <div>
+                <div class="store-product-price">$64.00</div>
+                <button class="store-addcart">🛒 Add to Cart</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cursor" id="cursor8"></div>
+    <div class="caption-strip">
+      <div class="caption-step" id="s8-step">STEP 6 — Customer View</div>
+      <div class="caption-text" id="s8-caption">Customers see only the catalogue assigned to their debtor/role combination. Categories &amp; products reflect what was defined in Pronto Xi — no manual maintenance in Adobe Commerce. Entitlements (next scene) layer on top to control quantities and spend at checkout.</div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SCENE 9: Entitlements Overview -->
+  <!-- ============================================================ -->
+  <div class="scene" data-scene="9">
+    <div class="scene-title"><strong>SCENE 10</strong> &nbsp;·&nbsp; Overview — <strong>Entitlements</strong></div>
+    <div class="overview-stage">
+      <div class="overview-title"><strong>Entitlements</strong> — what each user can purchase, and how much</div>
+      <div class="overview-subtitle">
+        Where catalogues control <em>visibility</em>, entitlements control <em>spend</em> and <em>frequency</em>.
+        A user is entitled to specific stock codes (or styles, or groups), with quantity limits, spend caps and renewal cycles.
+        Enforcement happens at Sales Order and POS entry in Pronto Xi.
+      </div>
+      <div class="overview-diagram">
+        <div class="ov-card">
+          <div class="ov-icon">👤</div>
+          <div class="ov-label">User &amp; Role</div>
+          <h4>Joe Smith</h4>
+          <p>From Smith Pty Ltd · construction team · full time</p>
+          <div class="ov-fields">role: Employee<br>emp_status: FT<br>debtor: SMITHCO</div>
+        </div>
+        <div class="ov-arrow">→</div>
+        <div class="ov-card">
+          <div class="ov-icon">🎟️</div>
+          <div class="ov-label">Entitlement Header</div>
+          <h4>SMITH-CONST-FT</h4>
+          <p>Active cycle: 1-Mar-26 to 31-May-26 · Expires 31-Dec-26</p>
+          <div class="ov-fields">zcus-entitlement-header<br>start_cycle, end_cycle<br>expiry_date, status</div>
+        </div>
+        <div class="ov-arrow">→</div>
+        <div class="ov-card">
+          <div class="ov-icon">📜</div>
+          <div class="ov-label">Entitlement Lines</div>
+          <h4>What &amp; how much</h4>
+          <p>Stock / style / group with limits</p>
+          <div class="ov-fields">SHIRT: 4 × $60 / 12m<br>BOOTS: 1 × $200 / 24m<br>(unlimited if no max)</div>
+        </div>
+        <div class="ov-arrow">→</div>
+        <div class="ov-card">
+          <div class="ov-icon">🧾</div>
+          <div class="ov-label">Claim at SO / POS</div>
+          <h4>Pronto enforces</h4>
+          <p>If entitled → charge to account<br>If exceeded → user pays directly</p>
+          <div class="ov-fields">zcus-entitlement-claim<br>status: Pending → Claimed<br>linked to SO order &amp; line</div>
+        </div>
+      </div>
+      <div class="overview-footnote">
+        <strong>Lifecycle:</strong> overnight batch (1am) checks completed cycles, rolls forward to the next period, and retires expired entitlements.
+        Unused balance does <em>not</em> carry over. eCommerce orders that exceed entitlement values land in Pronto with an <em>On Hold</em> status for review.
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SCENE 10: Uniforms Overview -->
+  <!-- ============================================================ -->
+  <div class="scene" data-scene="10">
+    <div class="scene-title"><strong>SCENE 11</strong> &nbsp;·&nbsp; Overview — <strong>Uniforms</strong></div>
+    <div class="overview-stage">
+      <div class="overview-title"><strong>Uniforms</strong> — managing custom-branded apparel requests</div>
+      <div class="overview-subtitle">
+        Some customers want their logo embroidered onto shirts, or a specific colourway not stocked off-the-shelf.
+        The Uniforms module tracks these requests through a defined approval workflow, with options (colour, embroidery, placement)
+        attached to each master record.
+      </div>
+      <div class="overview-diagram">
+        <div class="ov-card">
+          <div class="ov-icon">👔</div>
+          <div class="ov-label">Uniform Master</div>
+          <h4>Request #100</h4>
+          <p>ABC Industries — "Shirt Logo"</p>
+          <div class="ov-fields">zcus-uniform-master<br>uniform_no, type<br>stock_code, style<br>accountcode, status</div>
+        </div>
+        <div class="ov-arrow">→</div>
+        <div class="ov-card">
+          <div class="ov-icon">🎨</div>
+          <div class="ov-label">Options (per uniform)</div>
+          <h4>Colours · Embroidery · Locations</h4>
+          <p>RED, GREEN · Embroidery E1 · Top Right, Middle</p>
+          <div class="ov-fields">zcus-uniform-options<br>(C)olour / (E)mbroidery / (L)ocation<br>each with own status</div>
+        </div>
+      </div>
+      <div class="overview-statuses">
+        <span class="ov-status active">New Request</span>
+        <span class="ov-status-arrow">▸</span>
+        <span class="ov-status">Awaiting Quote</span>
+        <span class="ov-status-arrow">▸</span>
+        <span class="ov-status">Quoted</span>
+        <span class="ov-status-arrow">▸</span>
+        <span class="ov-status">Quote Accepted</span>
+        <span class="ov-status-arrow">▸</span>
+        <span class="ov-status">Samples Provided</span>
+        <span class="ov-status-arrow">▸</span>
+        <span class="ov-status">Samples Accepted</span>
+        <span class="ov-status-arrow">▸</span>
+        <span class="ov-status">Published</span>
+      </div>
+      <div class="overview-footnote">
+        <strong>Available actions:</strong> Find · Enter · Correct · Remove · Options · Status · Copy.
+        Artwork files can be attached via the QuickLink feature.
+        Once <em>Published</em>, the uniform stock-code becomes orderable through normal Pronto and Adobe Commerce channels.
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SCENE 11: Alignment Gaps — discrepancies between Pronto and Adobe specs -->
+  <!-- ============================================================ -->
+  <div class="scene" data-scene="11">
+    <div class="scene-title"><strong>SCENE 12</strong> &nbsp;·&nbsp; Cross-Team Alignment — Open Questions</div>
+    <div class="gaps-stage">
+      <div class="gaps-title">Where the <strong>Pronto</strong> and <strong>Adobe</strong> specs diverge</div>
+      <div class="gaps-subtitle">
+        Both teams have written internal specs that don't entirely match. This view surfaces the gaps so they can be resolved before build.
+        Items marked <span style="color:#c4341c;font-weight:700;">HIGH</span> are blockers; <span style="color:#d97706;font-weight:700;">MEDIUM</span> are integration-shape questions; <span style="color:#5a9a4a;font-weight:700;">LOW</span> are open items the Adobe team has already flagged.
+      </div>
+
+      <div class="gaps-list">
+
+        <div class="gap-item severity-high">
+          <div class="gap-label">
+            <div class="gap-num">#1</div>
+            <div class="gap-sev">High</div>
+          </div>
+          <div class="gap-side pronto">
+            <div class="gap-side-label">Pronto spec says</div>
+            <h5>Pronto owns the category hierarchy</h5>
+            <p>Categories are defined in Pronto via a dedicated <em>Categories</em> drill-down screen on each catalogue, with custom L1/L2/L3 code tables managed there.</p>
+          </div>
+          <div class="gap-vs">vs</div>
+          <div class="gap-side adobe">
+            <div class="gap-side-label">Adobe spec says</div>
+            <h5>Adobe owns the category hierarchy</h5>
+            <p>"Categories themselves are still created and managed in the standard Adobe Commerce way." Pronto only links existing categories via <code>catalog_scope_category</code>.</p>
+          </div>
+        </div>
+
+        <div class="gap-item severity-high">
+          <div class="gap-label">
+            <div class="gap-num">#2</div>
+            <div class="gap-sev">High</div>
+          </div>
+          <div class="gap-side pronto">
+            <div class="gap-side-label">Pronto data shape</div>
+            <h5>Catalogue → Categories → Lines → SKUs</h5>
+            <p>Four objects describe the catalogue's <em>structure</em>: <code>zcus-catalogue-header</code>, <code>zcus-catalogue-categories</code>, <code>zcus-catalogue-lines</code>, <code>zcus-catalogue-line-stock</code>.</p>
+          </div>
+          <div class="gap-vs">vs</div>
+          <div class="gap-side adobe">
+            <div class="gap-side-label">Adobe data shape</div>
+            <h5>Catalogue scope as permissions tag</h5>
+            <p>Four tables describe <em>access</em>: <code>catalog_scope</code>, <code>catalog_scope_product</code>, <code>catalog_scope_access</code>, <code>catalog_scope_category</code>. Categories and products live in Adobe's native entities.</p>
+          </div>
+        </div>
+
+        <div class="gap-item severity-med">
+          <div class="gap-label">
+            <div class="gap-num">#3</div>
+            <div class="gap-sev">Medium</div>
+          </div>
+          <div class="gap-side pronto">
+            <div class="gap-side-label">Pronto spec says</div>
+            <h5>Fixed 3-level hierarchy</h5>
+            <p>Cat L1 (mandatory) → Cat L2 (mandatory) → Cat L3 (optional). Hard-coded fields in the line-stock table.</p>
+          </div>
+          <div class="gap-vs">vs</div>
+          <div class="gap-side adobe">
+            <div class="gap-side-label">Adobe spec says</div>
+            <h5>Unlimited-depth native tree</h5>
+            <p>Uses <code>catalog_category_entity</code> with self-referencing <code>parent_id</code>. No depth limit; Acidgreen example shows mixed depth subtrees.</p>
+          </div>
+        </div>
+
+        <div class="gap-item severity-med">
+          <div class="gap-label">
+            <div class="gap-num">#4</div>
+            <div class="gap-sev">Medium</div>
+          </div>
+          <div class="gap-side pronto">
+            <div class="gap-side-label">Pronto spec says</div>
+            <h5>One debtor + one role per catalogue</h5>
+            <p>Catalogue header has a single <code>zch-accountcode</code> and <code>zch-role</code>. Multiple role assignments require <em>Copy</em>-ing the catalogue.</p>
+          </div>
+          <div class="gap-vs">vs</div>
+          <div class="gap-side adobe">
+            <div class="gap-side-label">Adobe spec says</div>
+            <h5>Many-to-many access grants</h5>
+            <p><code>catalog_scope_access</code> allows multiple (company, role) pairs per catalogue. <code>role_id = NULL</code> means all roles for that company.</p>
+          </div>
+        </div>
+
+        <div class="gap-item severity-med">
+          <div class="gap-label">
+            <div class="gap-num">#5</div>
+            <div class="gap-sev">Medium</div>
+          </div>
+          <div class="gap-side pronto">
+            <div class="gap-side-label">Pronto spec says</div>
+            <h5>Style entries explode to SKUs</h5>
+            <p>Operator can enter a style (e.g. <code>E1310</code>) and tick which variants apply. Result stored in <code>zcus-catalogue-line-stock</code>.</p>
+          </div>
+          <div class="gap-vs">vs</div>
+          <div class="gap-side adobe">
+            <div class="gap-side-label">Adobe spec says</div>
+            <h5>Flat SKU list in payload</h5>
+            <p><code>POST /catalog-scopes/{id}/products</code> accepts <code>{"skus": [...]}</code>. No notion of styles. Pronto must explode before sending — only line-stock crosses the wire.</p>
+          </div>
+        </div>
+
+        <div class="gap-item severity-med">
+          <div class="gap-label">
+            <div class="gap-num">#6</div>
+            <div class="gap-sev">Medium</div>
+          </div>
+          <div class="gap-side pronto">
+            <div class="gap-side-label">Pronto spec says</div>
+            <h5>No category enrichment</h5>
+            <p>No fields for description, image, or SEO metadata on the category records.</p>
+          </div>
+          <div class="gap-vs">vs</div>
+          <div class="gap-side adobe">
+            <div class="gap-side-label">Adobe spec says</div>
+            <h5>Adobe-side enrichment workflow</h5>
+            <p>"Category enrichment is the one operation that happens directly inside Adobe Commerce, performed by RSEA admin users." Pronto data + Adobe enrichment combined.</p>
+          </div>
+        </div>
+
+        <div class="gap-item severity-low">
+          <div class="gap-label">
+            <div class="gap-num">#7</div>
+            <div class="gap-sev">Open</div>
+          </div>
+          <div class="gap-side pronto">
+            <div class="gap-side-label">Pronto spec says</div>
+            <h5>Field details TBD</h5>
+            <p>Source field names for <code>catalog_scope_product</code> not addressed in the Pronto custom-objects diagram.</p>
+          </div>
+          <div class="gap-vs">vs</div>
+          <div class="gap-side adobe">
+            <div class="gap-side-label">Adobe spec says</div>
+            <h5>"Missing" on the Pronto side</h5>
+            <p>Data mapping table for <code>catalog_scope_product</code> explicitly shows <em>Missing</em> for both <code>pronto_code</code> and <code>product_id</code> source fields. Adobe team has flagged this.</p>
+          </div>
+        </div>
+
+        <div class="gap-item severity-low">
+          <div class="gap-label">
+            <div class="gap-num">#8</div>
+            <div class="gap-sev">Open</div>
+          </div>
+          <div class="gap-side pronto">
+            <div class="gap-side-label">Pronto spec says</div>
+            <h5>Categories drill-down on each catalogue</h5>
+            <p>Implies hierarchy is owned per-catalogue.</p>
+          </div>
+          <div class="gap-vs">vs</div>
+          <div class="gap-side adobe">
+            <div class="gap-side-label">Adobe spec says</div>
+            <h5>"Mismatch mapping" flagged</h5>
+            <p>The <code>catalog_category_entity</code> mapping shows <em>Mismatch mapping</em> for both <code>parent_id</code> and <code>name</code>. Open question already flagged by Acidgreen.</p>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="gaps-footer">
+        <strong>To resolve before build:</strong> the two HIGH-severity items above are the must-have decisions —
+        category ownership (#1) and the data-model translation (#2). Without alignment on these, the integration layer
+        between Pronto and Adobe Commerce can't be built unambiguously. The remaining items can be sorted as part of detailed design.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<script>
+// ============================================================
+// Scene controller
+// ============================================================
+const sceneLabels = [
+  'Scene 1 / 12 — Introduction',
+  'Scene 2 / 12 — Navigate to Adobe Catalogue Management',
+  'Scene 3 / 12 — Maintain Catalogues (Create New)',
+  'Scene 4 / 12 — Catalogue Categories (3-level hierarchy)',
+  'Scene 5 / 12 — Catalogue Lines (Assign Products)',
+  'Scene 6 / 12 — Users (read-only)',
+  'Scene 7 / 12 — Hand-off Pronto → Adobe Commerce',
+  'Scene 8 / 12 — Adobe Commerce: Custom Categories Admin',
+  'Scene 9 / 12 — Customer Storefront',
+  'Scene 10 / 12 — Entitlements Overview',
+  'Scene 11 / 12 — Uniforms Overview',
+  'Scene 12 / 12 — Alignment Gaps Between Specs'
+];
+
+let currentScene = 0;
+let isPlaying = false;
+let activeTimeouts = [];
+
+const scenes = document.querySelectorAll('.scene');
+const dots = document.querySelectorAll('.scene-dot');
+const sceneLabel = document.getElementById('sceneLabel');
+
+function clearTimers() {
+  activeTimeouts.forEach(t => clearTimeout(t));
+  activeTimeouts = [];
+}
+function delay(ms) {
+  return new Promise(r => activeTimeouts.push(setTimeout(r, ms)));
+}
+
+function setScene(n) {
+  clearTimers();
+  isPlaying = false;
+  currentScene = n;
+  scenes.forEach((s, i) => s.classList.toggle('active', i === n));
+  dots.forEach((d, i) => {
+    d.classList.toggle('active', i === n);
+    d.classList.toggle('complete', i < n);
+  });
+  sceneLabel.textContent = sceneLabels[n];
+  // Grey out the Play button on static scenes that have no animation
+  const staticScenes = new Set([0, 9, 10, 11]);
+  const playBtn = document.getElementById('playBtn');
+  if (staticScenes.has(n)) {
+    playBtn.disabled = true;
+    playBtn.classList.add('disabled');
+  } else {
+    playBtn.disabled = false;
+    playBtn.classList.remove('disabled');
+  }
+  resetScene(n);
+}
+
+function resetScene(n) {
+  if (n === 1) {
+    document.getElementById('s1-inventory').classList.remove('expanded', 'highlight');
+    document.getElementById('s1-acm').classList.remove('expanded', 'highlight');
+    document.getElementById('s1-maintcat').classList.remove('highlight');
+    moveCursor('cursor1', 50, 50, false);
+  } else if (n === 2) {
+    document.querySelectorAll('#s2-tbody tr.new-row').forEach(r => r.remove());
+    document.getElementById('s2-entry-dialog').classList.remove('show');
+    ['s2-ed-desc','s2-ed-debtor','s2-ed-role'].forEach(id => document.getElementById(id).value = '');
+    moveCursor('cursor2', 50, 50, false);
+  } else if (n === 3) {
+    document.getElementById('s3-tbody').innerHTML = '';
+    document.getElementById('s3-intro').classList.remove('fading');
+    moveCursor('cursor3', 50, 50, false);
+  } else if (n === 4) {
+    document.getElementById('s4-tbody').innerHTML = '';
+    document.getElementById('s4-entry-dialog').classList.remove('show');
+    document.getElementById('s4-sku-popup').classList.remove('show');
+    ['s4-ed-stock','s4-ed-style','s4-ed-cat1','s4-ed-cat2','s4-ed-cat3'].forEach(id => document.getElementById(id).value = '');
+    ['s4-sku-r1','s4-sku-r2','s4-sku-r3','s4-sku-r4'].forEach(id => {
+      const r = document.getElementById(id);
+      r.classList.remove('ticked');
+      r.querySelector('input').checked = false;
+    });
+    document.getElementById('s4-intro').classList.remove('fading');
+    moveCursor('cursor4', 50, 50, false);
+  } else if (n === 5) {
+    document.getElementById('s5-tbody').innerHTML = '';
+    document.getElementById('s5-intro').classList.remove('fading');
+    moveCursor('cursor5', 50, 50, false);
+  } else if (n === 6) {
+    ['s6-packet-1','s6-packet-2','s6-packet-3','s6-packet-4'].forEach(id => {
+      const p = document.getElementById(id);
+      p.style.opacity = '0';
+      p.style.left = '';
+      p.style.top = '';
+      p.style.transition = '';
+    });
+  } else if (n === 7) {
+    // Reset grid screen visible, edit screen hidden
+    document.getElementById('s7-grid-screen').classList.remove('fading');
+    document.getElementById('s7-edit-screen').classList.add('fading');
+    // Reset toggle and form values
+    document.getElementById('s7-enable-toggle').classList.remove('on');
+    document.getElementById('s7-toggle-label').textContent = 'No';
+    document.getElementById('s7-image-drop').classList.remove('uploaded');
+    document.getElementById('s7-seo-url').value = '';
+    document.getElementById('s7-seo-title').value = '';
+    document.getElementById('s7-seo-keywords').value = '';
+    document.getElementById('s7-seo-desc').value = '';
+    // Reset scroll on edit body
+    const editBody = document.getElementById('s7-edit-body');
+    if (editBody) editBody.scrollTop = 0;
+    moveCursor('cursor7', 50, 50, false);
+  } else if (n === 8) {
+    document.getElementById('s8-cat-ww').classList.remove('expanded', 'active');
+    document.getElementById('s8-cat-hivis').classList.remove('active');
+    document.getElementById('s8-cat-ppe').classList.remove('active');
+    document.getElementById('s8-sub-pants').classList.remove('active');
+    document.getElementById('s8-chev-ww').textContent = '▸';
+    document.getElementById('s8-dashboard').style.display = 'block';
+    document.getElementById('s8-products').style.display = 'none';
+    document.getElementById('s8-prod-1').classList.remove('show');
+    document.getElementById('s8-prod-2').classList.remove('show');
+    moveCursor('cursor8', 50, 50, false);
+  }
+}
+
+function moveCursor(id, x, y, visible = true) {
+  const c = document.getElementById(id);
+  if (!c) return;
+  c.style.left = x + '%';
+  c.style.top = y + '%';
+  if (visible) c.classList.add('visible'); else c.classList.remove('visible');
+}
+
+function moveCursorToEl(cursorId, target, opts = {}) {
+  const c = document.getElementById(cursorId);
+  const stage = document.getElementById('stage');
+  if (!c || !stage) return;
+  const el = typeof target === 'string' ? document.querySelector(target) : target;
+  if (!el) { console.warn('moveCursorToEl: target not found', target); return; }
+  const stageRect = stage.getBoundingClientRect();
+  const elRect = el.getBoundingClientRect();
+  const offsetX = opts.offsetX || 0;
+  const offsetY = opts.offsetY || 0;
+  const x = ((elRect.left + elRect.width / 2 + offsetX) - stageRect.left) / stageRect.width * 100;
+  const y = ((elRect.top + elRect.height / 2 + offsetY) - stageRect.top) / stageRect.height * 100;
+  c.style.left = x + '%';
+  c.style.top = y + '%';
+  c.classList.add('visible');
+}
+
+function clickCursor(id) {
+  const c = document.getElementById(id);
+  if (!c) return;
+  c.classList.add('click');
+  setTimeout(() => c.classList.remove('click'), 400);
+}
+
+async function typeInto(el, text, charDelay = 50) {
+  el.value = '';
+  el.classList.add('typing');
+  for (let i = 0; i < text.length; i++) {
+    el.value = text.substring(0, i + 1);
+    await delay(charDelay);
+  }
+  el.classList.remove('typing');
+}
+
+// ============================================================
+// Scene animations
+// ============================================================
+async function playScene0() {
+  // Intro - no animation needed
+  isPlaying = false;
+}
+
+async function playScene1() {
+  isPlaying = true;
+  resetScene(1);
+  await delay(500);
+
+  moveCursorToEl('cursor1', '#s1-inventory > .p-label');
+  await delay(900);
+  clickCursor('cursor1');
+  document.getElementById('s1-inventory').classList.add('expanded', 'highlight');
+  await delay(700);
+  document.getElementById('s1-inventory').classList.remove('highlight');
+
+  moveCursorToEl('cursor1', '#s1-acm > .p-label');
+  await delay(800);
+  clickCursor('cursor1');
+  document.getElementById('s1-acm').classList.add('expanded', 'highlight');
+  await delay(700);
+  document.getElementById('s1-acm').classList.remove('highlight');
+
+  moveCursorToEl('cursor1', '#s1-maintcat > .p-label');
+  await delay(800);
+  clickCursor('cursor1');
+  document.getElementById('s1-maintcat').classList.add('highlight');
+  await delay(900);
+  document.getElementById('s1-step').textContent = 'STEP 1 ✓ COMPLETE';
+  isPlaying = false;
+}
+
+async function playScene2() {
+  isPlaying = true;
+  resetScene(2);
+  await delay(400);
+
+  // Click Entry
+  moveCursorToEl('cursor2', '#s2-entry');
+  await delay(700);
+  clickCursor('cursor2');
+  await delay(300);
+
+  const dialog = document.getElementById('s2-entry-dialog');
+  dialog.classList.add('show');
+  await delay(500);
+
+  // Fill Description
+  moveCursorToEl('cursor2', '#s2-ed-desc');
+  await delay(400);
+  clickCursor('cursor2');
+  await typeInto(document.getElementById('s2-ed-desc'), 'KONE Workwear Catalogue', 40);
+
+  // Fill Debtor
+  moveCursorToEl('cursor2', '#s2-ed-debtor');
+  await delay(200);
+  clickCursor('cursor2');
+  await typeInto(document.getElementById('s2-ed-debtor'), 'KONEALEX', 50);
+
+  // Fill Role
+  moveCursorToEl('cursor2', '#s2-ed-role');
+  await delay(200);
+  clickCursor('cursor2');
+  await typeInto(document.getElementById('s2-ed-role'), 'Employee', 50);
+
+  // Update ID field
+  await delay(300);
+  document.getElementById('s2-ed-id').value = 'KONEALEX-WW';
+  document.getElementById('s2-ed-id').style.background = '#d4f0d4';
+  await delay(600);
+
+  // Click OK
+  moveCursorToEl('cursor2', '#s2-ed-ok');
+  await delay(400);
+  clickCursor('cursor2');
+  await delay(300);
+  dialog.classList.remove('show');
+
+  // Insert new row at top
+  const tbody = document.getElementById('s2-tbody');
+  const newRow = document.createElement('tr');
+  newRow.className = 'new-row';
+  newRow.innerHTML = '<td>KONEALEX-WW</td><td>KONE Workwear Catalogue</td><td>KONEALEX</td><td>KONE Elevators Australia</td><td>Employee</td><td>Active</td><td>johnh</td><td>13-MAY-2026</td>';
+  tbody.insertBefore(newRow, tbody.firstChild);
+  await delay(800);
+  document.getElementById('s2-step').textContent = 'STEP 2 ✓ COMPLETE';
+  isPlaying = false;
+}
+
+async function playScene3() {
+  isPlaying = true;
+  resetScene(3);
+  await delay(400);
+
+  // === Pre-roll: from Maintain Catalogues, click Categories ===
+  const intro = document.getElementById('s3-intro');
+  // Move cursor onto the pulsing Categories button on the overlay
+  moveCursorToEl('cursor3', '#s3-intro-cat-btn');
+  await delay(1100);
+  clickCursor('cursor3');
+  await delay(300);
+  // Fade overlay out
+  intro.classList.add('fading');
+  await delay(600);
+  // leave fading applied so target dialog stays visible
+
+  // === Categories grid populates ===
+  const tbody = document.getElementById('s3-tbody');
+  const rows = [
+    { c1: 'WW', d1: 'Workwear', c2: 'SH', d2: 'Shirts', c3: 'M', d3: 'Male' },
+    { c1: 'WW', d1: 'Workwear', c2: 'SH', d2: 'Shirts', c3: 'F', d3: 'Female' },
+    { c1: 'WW', d1: 'Workwear', c2: 'PT', d2: 'Pants', c3: '', d3: '' },
+    { c1: 'WW', d1: 'Workwear', c2: 'JACK', d2: 'Jackets', c3: '', d3: '' },
+    { c1: 'HV', d1: 'Hi-Vis', c2: 'SH', d2: 'Shirts', c3: '', d3: '' },
+    { c1: 'PPE', d1: 'PPE', c2: 'BOOT', d2: 'Boots', c3: '', d3: '' }
+  ];
+
+  // Click Entry on the now-visible Categories screen to set context
+  moveCursorToEl('cursor3', '#s3-entry');
+  await delay(600);
+  clickCursor('cursor3');
+  await delay(400);
+
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    const tr = document.createElement('tr');
+    tr.className = 'new-row';
+    tr.innerHTML = `<td>${r.c1}</td><td>${r.d1}</td><td>${r.c2}</td><td>${r.d2}</td><td>${r.c3 || '—'}</td><td>${r.d3 || '—'}</td>`;
+    tbody.appendChild(tr);
+    await delay(500);
+  }
+  document.getElementById('s3-step').textContent = 'STEP 3 ✓ COMPLETE';
+  isPlaying = false;
+}
+
+async function playScene4() {
+  isPlaying = true;
+  resetScene(4);
+  await delay(400);
+
+  // === Pre-roll: from Categories, click Lines ===
+  const intro = document.getElementById('s4-intro');
+  moveCursorToEl('cursor4', '#s4-intro-lines-btn');
+  await delay(1100);
+  clickCursor('cursor4');
+  await delay(300);
+  intro.classList.add('fading');
+  await delay(600);
+  // leave fading applied so target dialog stays visible
+
+  const tbody = document.getElementById('s4-tbody');
+  const entryDialog = document.getElementById('s4-entry-dialog');
+  const skuPopup = document.getElementById('s4-sku-popup');
+
+  // === First entry: regular stock code ===
+  moveCursorToEl('cursor4', '#s4-entry');
+  await delay(700);
+  clickCursor('cursor4');
+  await delay(300);
+  entryDialog.classList.add('show');
+  await delay(500);
+
+  moveCursorToEl('cursor4', '#s4-ed-stock');
+  await delay(400);
+  clickCursor('cursor4');
+  await typeInto(document.getElementById('s4-ed-stock'), 'E3910STZ', 50);
+
+  moveCursorToEl('cursor4', '#s4-ed-cat1');
+  await delay(200);
+  clickCursor('cursor4');
+  await typeInto(document.getElementById('s4-ed-cat1'), 'WW', 50);
+  moveCursorToEl('cursor4', '#s4-ed-cat2');
+  await delay(150);
+  clickCursor('cursor4');
+  await typeInto(document.getElementById('s4-ed-cat2'), 'PT', 50);
+
+  moveCursorToEl('cursor4', '#s4-ed-ok');
+  await delay(400);
+  clickCursor('cursor4');
+  await delay(300);
+  entryDialog.classList.remove('show');
+
+  const r1 = document.createElement('tr');
+  r1.className = 'new-row';
+  r1.innerHTML = '<td>E3910STZ</td><td>—</td><td>ELEVEN Workwear Stretch Belt</td><td>WW</td><td>PT</td><td>—</td><td>1</td>';
+  tbody.appendChild(r1);
+  await delay(900);
+
+  // Clear inputs
+  ['s4-ed-stock','s4-ed-style','s4-ed-cat1','s4-ed-cat2','s4-ed-cat3'].forEach(id => document.getElementById(id).value = '');
+
+  // === Second entry: leave stock blank, prompt for style => SKU popup ===
+  moveCursorToEl('cursor4', '#s4-entry');
+  await delay(600);
+  clickCursor('cursor4');
+  await delay(300);
+  entryDialog.classList.add('show');
+  await delay(500);
+
+  // Leave stock code blank, go to style
+  moveCursorToEl('cursor4', '#s4-ed-style');
+  await delay(500);
+  clickCursor('cursor4');
+  await typeInto(document.getElementById('s4-ed-style'), 'E1310', 60);
+
+  moveCursorToEl('cursor4', '#s4-ed-cat1');
+  await delay(200);
+  clickCursor('cursor4');
+  await typeInto(document.getElementById('s4-ed-cat1'), 'WW', 50);
+  moveCursorToEl('cursor4', '#s4-ed-cat2');
+  await delay(150);
+  clickCursor('cursor4');
+  await typeInto(document.getElementById('s4-ed-cat2'), 'PT', 50);
+
+  moveCursorToEl('cursor4', '#s4-ed-ok');
+  await delay(400);
+  clickCursor('cursor4');
+  await delay(300);
+  entryDialog.classList.remove('show');
+  await delay(200);
+
+  // SKU expansion popup appears
+  skuPopup.classList.add('show');
+  await delay(700);
+
+  // Tick three SKUs (the customer wants Black, Orange/Navy, Yellow/Navy)
+  const sku1 = document.getElementById('s4-sku-r1');
+  const sku2 = document.getElementById('s4-sku-r2');
+  const sku3 = document.getElementById('s4-sku-r3');
+
+  moveCursorToEl('cursor4', sku1.querySelector('input'));
+  await delay(500);
+  clickCursor('cursor4');
+  sku1.querySelector('input').checked = true;
+  sku1.classList.add('ticked');
+  await delay(400);
+
+  moveCursorToEl('cursor4', sku2.querySelector('input'));
+  await delay(400);
+  clickCursor('cursor4');
+  sku2.querySelector('input').checked = true;
+  sku2.classList.add('ticked');
+  await delay(400);
+
+  moveCursorToEl('cursor4', sku3.querySelector('input'));
+  await delay(400);
+  clickCursor('cursor4');
+  sku3.querySelector('input').checked = true;
+  sku3.classList.add('ticked');
+  await delay(500);
+
+  // Click OK on SKU popup
+  moveCursorToEl('cursor4', '#s4-sku-ok');
+  await delay(500);
+  clickCursor('cursor4');
+  await delay(400);
+  skuPopup.classList.remove('show');
+
+  const r2 = document.createElement('tr');
+  r2.className = 'new-row';
+  r2.innerHTML = '<td>—</td><td>E1310</td><td>ELEVEN Stretch Drill Work Pant</td><td>WW</td><td>PT</td><td>—</td><td>3</td>';
+  tbody.appendChild(r2);
+  await delay(900);
+
+  document.getElementById('s4-step').textContent = 'STEP 4 ✓ COMPLETE';
+  isPlaying = false;
+}
+
+async function playScene5() {
+  isPlaying = true;
+  resetScene(5);
+  await delay(400);
+
+  // === Pre-roll: back on Maintain Catalogues, click Users ===
+  const intro = document.getElementById('s5-intro');
+  moveCursorToEl('cursor5', '#s5-intro-users-btn');
+  await delay(1100);
+  clickCursor('cursor5');
+  await delay(300);
+  intro.classList.add('fading');
+  await delay(600);
+  // leave fading applied so target dialog stays visible
+
+  const tbody = document.getElementById('s5-tbody');
+  const users = [
+    { id: 'KONE-001', first: 'Sarah', last: 'Chen', email: 's.chen@kone.com.au', role: 'Employee', stat: 'FT' },
+    { id: 'KONE-002', first: 'David', last: 'Patel', email: 'd.patel@kone.com.au', role: 'Employee', stat: 'FT' },
+    { id: 'KONE-003', first: 'Mia', last: 'Nguyen', email: 'm.nguyen@kone.com.au', role: 'Employee', stat: 'PT' },
+    { id: 'KONE-004', first: 'James', last: 'O\'Brien', email: 'j.obrien@kone.com.au', role: 'Employee', stat: 'FT' },
+    { id: 'KONE-005', first: 'Aisha', last: 'Williams', email: 'a.williams@kone.com.au', role: 'Employee', stat: 'CA' },
+    { id: 'KONE-006', first: 'Tom', last: 'Hartmann', email: 't.hartmann@kone.com.au', role: 'Employee', stat: 'FT' }
+  ];
+
+  for (let i = 0; i < users.length; i++) {
+    const u = users[i];
+    const tr = document.createElement('tr');
+    tr.className = 'new-row';
+    tr.innerHTML = `<td>${u.id}</td><td>${u.first}</td><td>${u.last}</td><td>${u.email}</td><td>${u.role}</td><td>${u.stat}</td>`;
+    tbody.appendChild(tr);
+    await delay(280);
+  }
+  document.getElementById('s5-step').textContent = 'STEP 5 ✓ COMPLETE';
+  isPlaying = false;
+}
+
+async function playScene6() {
+  isPlaying = true;
+  resetScene(6);
+  await delay(400);
+
+  const packetIds = ['s6-packet-1','s6-packet-2','s6-packet-3','s6-packet-4'];
+  const prontoPanel = document.getElementById('s6-pronto');
+  const adobePanel = document.getElementById('s6-adobe');
+  const stage = document.getElementById('stage');
+  const stageRect = stage.getBoundingClientRect();
+  const prontoRect = prontoPanel.getBoundingClientRect();
+  const adobeRect = adobePanel.getBoundingClientRect();
+
+  // Start position: stacked vertically, centred on the Pronto panel
+  const startX = (prontoRect.left + prontoRect.width / 2 - stageRect.left);
+  const prontoCentreY = (prontoRect.top + prontoRect.height / 2 - stageRect.top);
+
+  // End position: stacked vertically just to the right of the Adobe panel
+  // (so users can still see the Adobe panel + the inbound packets clearly)
+  const endX = (adobeRect.right + 95 - stageRect.left);
+  const adobeCentreY = (adobeRect.top + adobeRect.height / 2 - stageRect.top);
+
+  const packetSpacing = 42; // px between stacked packets
+  const totalHeight = packetSpacing * (packetIds.length - 1);
+  // Vertical offsets so they stack symmetrically around the centre
+  const yOffsets = packetIds.map((_, i) => (i * packetSpacing) - (totalHeight / 2));
+
+  // Initial positioning: stacked at the Pronto panel
+  packetIds.forEach((id, i) => {
+    const p = document.getElementById(id);
+    p.style.transition = 'none';
+    p.style.left = startX + 'px';
+    p.style.top = (prontoCentreY + yOffsets[i]) + 'px';
+    p.style.transform = 'translate(-50%, -50%)';
+  });
+
+  await delay(50);
+
+  // Fade in (small stagger so it looks like they emerge one after another)
+  packetIds.forEach((id, i) => {
+    const p = document.getElementById(id);
+    p.style.transition = 'opacity 0.4s ease ' + (i * 100) + 'ms';
+    p.style.opacity = '1';
+  });
+  await delay(700);
+
+  // Animate across to Adobe (all at once, no stagger so they move as a group)
+  packetIds.forEach((id, i) => {
+    const p = document.getElementById(id);
+    p.style.transition = 'left 1.8s cubic-bezier(0.4, 0, 0.2, 1), top 1.8s cubic-bezier(0.4, 0, 0.2, 1)';
+    p.style.left = endX + 'px';
+    p.style.top = (adobeCentreY + yOffsets[i]) + 'px';
+  });
+
+  await delay(1900);
+  // Leave packets visible — do NOT fade them out
+  isPlaying = false;
+}
+
+async function playScene7() {
+  isPlaying = true;
+  resetScene(7);
+  await delay(400);
+
+  // === Step 1: Click Edit on the Workwear row ===
+  moveCursorToEl('cursor7', '#s7-edit-workwear');
+  await delay(1100);
+  clickCursor('cursor7');
+  await delay(300);
+
+  // Swap screens: fade grid out, fade edit in
+  document.getElementById('s7-grid-screen').classList.add('fading');
+  document.getElementById('s7-edit-screen').classList.remove('fading');
+  await delay(700);
+
+  // === Step 2: Toggle Enable Category to Yes ===
+  moveCursorToEl('cursor7', '#s7-enable-toggle .ac-toggle-track');
+  await delay(700);
+  clickCursor('cursor7');
+  document.getElementById('s7-enable-toggle').classList.add('on');
+  document.getElementById('s7-toggle-label').textContent = 'Yes';
+  await delay(700);
+
+  // === Step 3: Click Upload, image appears ===
+  moveCursorToEl('cursor7', '#s7-upload-btn');
+  await delay(700);
+  clickCursor('cursor7');
+  await delay(400);
+  document.getElementById('s7-image-drop').classList.add('uploaded');
+  await delay(900);
+
+  // === Step 4: Scroll down to the SEO section ===
+  const editBody = document.getElementById('s7-edit-body');
+  const seoSection = document.getElementById('s7-seo-section');
+  if (editBody && seoSection) {
+    // Smooth scroll the form body
+    const start = editBody.scrollTop;
+    const end = seoSection.offsetTop - 20;
+    const duration = 700;
+    const startTime = performance.now();
+    await new Promise(resolve => {
+      function step(now) {
+        const t = Math.min(1, (now - startTime) / duration);
+        const eased = t < 0.5 ? 2*t*t : -1 + (4 - 2*t) * t;
+        editBody.scrollTop = start + (end - start) * eased;
+        if (t < 1) requestAnimationFrame(step);
+        else resolve();
+      }
+      requestAnimationFrame(step);
+    });
+  }
+  await delay(300);
+
+  // === Step 5: Type into URL Key ===
+  moveCursorToEl('cursor7', '#s7-seo-url');
+  await delay(400);
+  clickCursor('cursor7');
+  await typeInto(document.getElementById('s7-seo-url'), 'workwear', 50);
+  await delay(200);
+
+  // === Step 6: Type into Meta Title ===
+  moveCursorToEl('cursor7', '#s7-seo-title');
+  await delay(300);
+  clickCursor('cursor7');
+  await typeInto(document.getElementById('s7-seo-title'), 'Workwear — Shell Employee Catalogue', 30);
+  await delay(200);
+
+  // === Step 7: Type into Meta Keywords ===
+  moveCursorToEl('cursor7', '#s7-seo-keywords');
+  await delay(300);
+  clickCursor('cursor7');
+  await typeInto(document.getElementById('s7-seo-keywords'), 'workwear, shirts, jackets, hi-vis, safety apparel', 25);
+  await delay(200);
+
+  // === Step 8: Type into Meta Description ===
+  moveCursorToEl('cursor7', '#s7-seo-desc');
+  await delay(300);
+  clickCursor('cursor7');
+  await typeInto(document.getElementById('s7-seo-desc'), 'Workwear and safety apparel for Shell employees — shirts, jackets and hi-vis essentials.', 22);
+  await delay(500);
+
+  document.getElementById('s7-step').textContent = 'STEP 7 ✓ COMPLETE';
+  isPlaying = false;
+}
+
+async function playScene8() {
+  isPlaying = true;
+  resetScene(8);
+  await delay(500);
+
+  moveCursorToEl('cursor8', '#s8-cat-ww');
+  await delay(900);
+  clickCursor('cursor8');
+  document.getElementById('s8-cat-ww').classList.add('expanded', 'active');
+  document.getElementById('s8-chev-ww').textContent = '▾';
+  await delay(700);
+
+  moveCursorToEl('cursor8', '#s8-sub-pants');
+  await delay(800);
+  clickCursor('cursor8');
+  document.getElementById('s8-sub-pants').classList.add('active');
+  await delay(400);
+
+  document.getElementById('s8-dashboard').style.display = 'none';
+  document.getElementById('s8-products').style.display = 'block';
+  await delay(400);
+
+  document.getElementById('s8-prod-1').classList.add('show');
+  await delay(500);
+  document.getElementById('s8-prod-2').classList.add('show');
+  await delay(900);
+  document.getElementById('s8-step').textContent = 'STEP 6 ✓ COMPLETE';
+  isPlaying = false;
+}
+
+async function playScene9() {
+  // Entitlements overview - static
+  isPlaying = false;
+}
+
+async function playScene10() {
+  // Uniforms overview - static
+  isPlaying = false;
+}
+
+async function playScene11() {
+  // Alignment gaps - static
+  isPlaying = false;
+}
+
+const playFunctions = [playScene0, playScene1, playScene2, playScene3, playScene4, playScene5, playScene6, playScene7, playScene8, playScene9, playScene10, playScene11];
+
+document.getElementById('playBtn').addEventListener('click', () => {
+  if (isPlaying) return;
+  playFunctions[currentScene]();
+});
+document.getElementById('nextBtn').addEventListener('click', () => {
+  if (currentScene < scenes.length - 1) setScene(currentScene + 1);
+});
+document.getElementById('prevBtn').addEventListener('click', () => {
+  if (currentScene > 0) setScene(currentScene - 1);
+});
+document.getElementById('restartBtn').addEventListener('click', () => setScene(0));
+dots.forEach((d, i) => d.addEventListener('click', () => setScene(i)));
+</script>
+
+</body>
+</html>
