@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RSEA B2B Replatform — Workflow Visualisations</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    min-height: 100%;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: #14171d;
+    color: #e8e8e8;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 60px 20px 40px;
+    min-height: 100vh;
+  }
+
+  /* ---------- Page header ---------- */
+  .header {
+    text-align: center;
+    max-width: 860px;
+    margin-bottom: 50px;
+  }
+  .header .eyebrow {
+    color: #c4341c;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    margin-bottom: 12px;
+  }
+  .header h1 {
+    font-size: 34px;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 14px;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+  }
+  .header .tagline {
+    font-size: 15px;
+    color: #888;
+    line-height: 1.6;
+  }
+  .header .tagline strong { color: #aab; }
+
+  /* ---------- Journey grid ---------- */
+  .journeys {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    max-width: 1200px;
+    width: 100%;
+  }
+  @media (max-width: 980px) {
+    .journeys { grid-template-columns: 1fr; max-width: 480px; }
+  }
+
+  .journey-card {
+    background: #1d2128;
+    border: 1px solid #2a2e36;
+    border-radius: 12px;
+    padding: 32px 28px;
+    color: #ccc;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: relative;
+    overflow: hidden;
+    min-height: 380px;
+  }
+  .journey-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+  }
+  .journey-card.catalogue::before {
+    background: linear-gradient(90deg, #d97706 0%, #c4341c 100%);
+  }
+  .journey-card.entitlement::before {
+    background: linear-gradient(90deg, #c4341c 0%, #6c2bd9 100%);
+  }
+  .journey-card.valueadd::before {
+    background: linear-gradient(90deg, #6c2bd9 0%, #2a8aae 100%);
+  }
+  .journey-card:hover {
+    transform: translateY(-4px);
+    border-color: #4a505c;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+  }
+  .journey-card.disabled {
+    opacity: 0.55;
+    pointer-events: none;
+  }
+  .journey-card.disabled:hover {
+    transform: none;
+    border-color: #2a2e36;
+    box-shadow: none;
+  }
+
+  .journey-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    background: rgba(255,255,255,0.04);
+  }
+  .journey-card.catalogue .journey-icon {
+    background: rgba(217, 119, 6, 0.12);
+    border: 1px solid rgba(217, 119, 6, 0.3);
+  }
+  .journey-card.entitlement .journey-icon {
+    background: rgba(196, 52, 28, 0.12);
+    border: 1px solid rgba(196, 52, 28, 0.3);
+  }
+  .journey-card.valueadd .journey-icon {
+    background: rgba(108, 43, 217, 0.12);
+    border: 1px solid rgba(108, 43, 217, 0.3);
+  }
+
+  .journey-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .journey-card.catalogue .journey-label { color: #d97706; }
+  .journey-card.entitlement .journey-label { color: #c4341c; }
+  .journey-card.valueadd .journey-label { color: #8c5be9; }
+
+  .journey-card h2 {
+    font-size: 22px;
+    color: white;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .journey-card p {
+    font-size: 13px;
+    line-height: 1.6;
+    color: #aab;
+    flex: 1;
+  }
+  .journey-card .status {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+  .status-pill {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 11px;
+    letter-spacing: 0.5px;
+  }
+  .status-pill.ready {
+    background: rgba(90, 122, 74, 0.2);
+    color: #8fb87a;
+    border: 1px solid rgba(90, 122, 74, 0.4);
+  }
+  .status-pill.partial {
+    background: rgba(217, 119, 6, 0.15);
+    color: #e8a64a;
+    border: 1px solid rgba(217, 119, 6, 0.4);
+  }
+  .status-pill.draft {
+    background: rgba(108, 43, 217, 0.15);
+    color: #b59be0;
+    border: 1px solid rgba(108, 43, 217, 0.4);
+  }
+
+  .journey-card .cta {
+    margin-top: 8px;
+    padding: 12px 18px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 13px;
+    text-align: center;
+    color: white;
+    transition: filter 0.2s;
+  }
+  .journey-card.catalogue .cta { background: #d97706; }
+  .journey-card.entitlement .cta { background: #c4341c; }
+  .journey-card.valueadd .cta { background: #6c2bd9; }
+  .journey-card:hover .cta { filter: brightness(1.15); }
+  .journey-card.disabled .cta {
+    background: #2a2e36;
+    color: #777;
+  }
+
+  /* ---------- Footer ---------- */
+  .footer {
+    margin-top: 60px;
+    font-size: 11px;
+    color: #555;
+    text-align: center;
+    max-width: 700px;
+    line-height: 1.6;
+  }
+  .footer strong { color: #888; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="eyebrow">RSEA SAFETY · B2B REPLATFORM</div>
+  <h1>Workflow Visualisations</h1>
+  <div class="tagline">
+    Animated walkthroughs of the three major custom workflows in the RSEA Safety platform —
+    <strong>Catalogues</strong>, <strong>Entitlements</strong> and <strong>Value Add</strong>.
+    Each journey covers the current-state process today and the future-state design proposed for Adobe Commerce.
+  </div>
+</div>
+
+<div class="journeys">
+
+  <a class="journey-card catalogue" href="catalogue/index.html">
+    <div class="journey-icon">📚</div>
+    <div class="journey-label">Journey 1</div>
+    <h2>Catalogue Journey</h2>
+    <p>
+      Customer-specific product groupings with a 3-level category hierarchy. Today it's mastered in Commerce Vision;
+      tomorrow it shifts to Pronto Xi with custom screens that push down to Adobe Commerce.
+    </p>
+    <div class="status">
+      <span class="status-pill ready">As-Is ready</span>
+      <span class="status-pill ready">To-Be ready</span>
+    </div>
+    <div class="cta">▶ Open catalogue journey</div>
+  </a>
+
+  <a class="journey-card entitlement" href="entitlement/index.html">
+    <div class="journey-icon">🎟️</div>
+    <div class="journey-label">Journey 2</div>
+    <h2>Entitlement Journey</h2>
+    <p>
+      Per-role purchasing allowances — a budget or quantity of specific stock that company employees can claim against their employer's account.
+      Pronto authors, App Builder caches, Adobe Commerce enforces at PDP, cart and checkout.
+    </p>
+    <div class="status">
+      <span class="status-pill partial">As-Is to come</span>
+      <span class="status-pill ready">To-Be ready</span>
+    </div>
+    <div class="cta">▶ Open entitlement journey</div>
+  </a>
+
+  <a class="journey-card valueadd" href="valueadd/index.html">
+    <div class="journey-icon">👕</div>
+    <div class="journey-label">Journey 3</div>
+    <h2>Value Add Journey</h2>
+    <p>
+      Workflow for custom-branded apparel — colours, embroidery, screen print and heat-press placements,
+      tracked through five approval phases from digital mockup to physical sample to product setup.
+    </p>
+    <div class="status">
+      <span class="status-pill draft">Coming soon</span>
+    </div>
+    <div class="cta">▶ Open value add journey</div>
+  </a>
+
+</div>
+
+<div class="footer">
+  Each journey page has its own <strong>Past</strong> and <strong>Future</strong> walkthroughs.
+  Use the <strong>Previous / Next</strong> controls inside each walkthrough, or click the scene dots to jump around.
+</div>
+
+</body>
+</html>
